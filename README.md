@@ -59,6 +59,7 @@ yarn build
 ```
 
 ## 📁 Estrutura do Projeto
+```bash
 cakecup/
 ├── assets/
 │ ├── css/
@@ -74,6 +75,7 @@ cakecup/
 ├── public/
 ├── stores/
 └── types/
+```
 
 ## 🔍 Componentes Principais
 
@@ -125,7 +127,7 @@ assets/css/variables.scss
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ## ✨ Autor
-Tiago Gois - [GitHub](https://github.com/tiagogois)
+Tiago Gois - [GitHub](https://github.com/goistsg)
 
 ---
-⌨️ com ❤️ por [Tiago Gois](https://github.com/tiagogois)
+⌨️ com ❤️ por [Tiago Gois](https://github.com/goistsg)
