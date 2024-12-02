@@ -1,0 +1,27 @@
+// Variáveis globais
+:root {
+  --primary-color: #ff4081;
+  --secondary-color: #f8bbd0;
+  --text-color: #333333;
+  --background-color: #ffffff;
+  --error-color: #f44336;
+  --success-color: #4caf50;
+}
+
+// Breakpoints
+$mobile: 768px;
+$tablet: 1024px;
+$desktop: 1200px;
+
+// Mixins
+@mixin mobile {
+  @media (max-width: $mobile) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: $tablet) {
+    @content;
+  }
+} 
