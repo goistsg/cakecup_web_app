@@ -36,7 +36,7 @@
 
     .cta-button {
       padding: 1rem 2rem;
-      background-color: #ff4081;
+      background-color: var(--primary);
       color: white;
       border-radius: 30px;
       text-decoration: none;
@@ -44,7 +44,7 @@
       transition: background-color 0.3s;
 
       &:hover {
-        background-color: color.adjust(#ff4081, $lightness: 10%);
+        box-shadow: 0 4px 16px rgba(255, 105, 180, 0.4);
       }
     }
   }

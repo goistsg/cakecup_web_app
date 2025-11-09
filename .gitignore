@@ -6,6 +6,9 @@
 .cache
 dist
 
+# Internal documentation (histórico e summaries)
+docs/internal/
+
 # Node dependencies
 node_modules
 

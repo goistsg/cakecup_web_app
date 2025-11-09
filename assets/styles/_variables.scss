@@ -1,27 +1,51 @@
-// Variáveis globais
+// CakeCup Color Palette
 :root {
-  --primary-color: #ff4081;
-  --secondary-color: #f8bbd0;
-  --text-color: #333333;
-  --background-color: #ffffff;
-  --error-color: #f44336;
-  --success-color: #4caf50;
+  // Main Colors
+  --primary-color: #8B0014;
+  --secondary-color: #D32F2F;
+  --accent-color: #A0522D;
+  
+  // Background Colors
+  --background-color: #E9DFD7;
+  --surface-color: #FBE9E7;
+  
+  // Text Colors
+  --text-color: #3A1F1B;
+  --text-light: #6B4D47;
+  
+  // Status Colors
+  --success-color: #4CAF50;
+  --error-color: #D32F2F;
+  --warning-color: #FF9800;
+  --info-color: #2196F3;
+  
+  // Neutral Colors
+  --white: #FFFFFF;
+  --gray-light: #F5F5F5;
+  --gray: #BDBDBD;
+  --gray-dark: #757575;
+  --black: #212121;
+  
+  // Legacy support (mantém compatibilidade)
+  --color-primary: var(--primary-color);
+  --color-secondary: var(--secondary-color);
 }
 
-// Breakpoints
-$mobile: 768px;
-$tablet: 1024px;
-$desktop: 1200px;
+// SCSS Variables
+$primary: #8B0014;
+$secondary: #D32F2F;
+$accent: #A0522D;
+$background: #E9DFD7;
+$surface: #FBE9E7;
+$text: #3A1F1B;
+$text-light: #6B4D47;
 
-// Mixins
-@mixin mobile {
-  @media (max-width: $mobile) {
-    @content;
-  }
+// Export for usage in Vue
+:export {
+  primary: $primary;
+  secondary: $secondary;
+  accent: $accent;
+  background: $background;
+  surface: $surface;
+  text: $text;
 }
-
-@mixin tablet {
-  @media (max-width: $tablet) {
-    @content;
-  }
-} 

@@ -1,51 +1,28 @@
-import { ref, computed } from 'vue'
-import { useFetch } from '@vueuse/core'
-
-export interface Produto {
-  id: number
-  name: string
-  description: string
-  price: number
-  category: string
-  image_url: string
-  flavor: string
-  sku: string
-}
+import { useProductsStore } from '~/stores/products'
+import { computed } from 'vue'
 
 export function useProducts() {
-  const produtos = ref<Produto[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-
-  const fetchProdutos = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      // NUXT_PUBLIC_API_BASE=http://sua-api.com
-      const baseUrl = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
-      const { data } = await useFetch<{ data: Produto[] }>(`${baseUrl}/products`, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      })
-      
-      if (data.value && JSON.parse(String(data.value))['data']) {
-        produtos.value = JSON.parse(String(data.value))['data'] as Produto[]
-      }
-    } catch (err) {
-      error.value = 'Erro ao carregar produtos'
-      console.error('Erro:', err)
-    } finally {
-      loading.value = false
-    }
-  }
+  const productsStore = useProductsStore()
 
   return {
-    produtos,
-    loading,
-    error,
-    fetchProdutos
+    // State
+    products: computed(() => productsStore.products),
+    categories: computed(() => productsStore.categories),
+    selectedProduct: computed(() => productsStore.selectedProduct),
+    selectedCategory: computed(() => productsStore.selectedCategory),
+    filteredProducts: computed(() => productsStore.filteredProducts),
+    featuredProducts: computed(() => productsStore.featuredProducts),
+    loading: computed(() => productsStore.loading),
+    error: computed(() => productsStore.error),
+
+    // Actions
+    fetchProducts: (companyId?: string, categoryId?: string) => 
+      productsStore.fetchProducts(companyId, categoryId),
+    fetchProduct: (id: string) => productsStore.fetchProduct(id),
+    fetchCategories: (companyId?: string) => productsStore.fetchCategories(companyId),
+    setSelectedCategory: (categoryId: string | null) => 
+      productsStore.setSelectedCategory(categoryId),
+    getProductById: (id: string) => productsStore.getProductById(id),
+    clearError: () => productsStore.clearError(),
   }
 } 

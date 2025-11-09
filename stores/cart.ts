@@ -1,58 +1,161 @@
 import { defineStore } from 'pinia'
+import { api } from '~/utils/api'
+import type { Cart, CartItem, Product } from '~/types/api'
 
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image: string
+interface CartState {
+  cart: Cart | null
+  items: CartItem[]
+  isOpen: boolean
+  loading: boolean
+  error: string | null
+  clientId: string | null
 }
 
 export const useCartStore = defineStore('cart', {
-  state: () => ({
-    items: [] as CartItem[],
+  state: (): CartState => ({
+    cart: null,
+    items: [],
     isOpen: false,
+    loading: false,
+    error: null,
+    clientId: null,
   }),
 
   getters: {
-    totalItems: (state: any) => {
-      return state.items.reduce((total: any, item: any) => total + item.quantity, 0)
+    totalItems: (state) => {
+      return state.items.reduce((total, item) => total + item.quantity, 0)
     },
     
-    total: (state: any) => {
-      return state.items.reduce((total: any, item: any) => total + (item.price * item.quantity), 0)
+    total: (state) => {
+      return state.items.reduce((total, item) => total + item.subtotal, 0)
     },
     
-    formattedTotal: (state: any) => {
-        return `R$ ${state.total.toFixed(2)}`
-    }
+    formattedTotal(): string {
+      return `R$ ${this.total.toFixed(2)}`
+    },
+
+    itemsCount: (state) => state.items.length,
   },
 
   actions: {
-    addItem(item: CartItem) {
-      const existingItem = this.items.find((i: CartItem) => i.id === item.id)
-      
-      if (existingItem) {
-        existingItem.quantity += item.quantity
-      } else {
-        this.items.push({ ...item })
+    setClientId(clientId: string) {
+      this.clientId = clientId
+    },
+
+    async fetchCart() {
+      if (!this.clientId) {
+        console.warn('ClientId não definido')
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.getCart(this.clientId)
+        this.cart = response.data || response
+        this.items = this.cart?.items || []
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao carregar carrinho'
+        throw error
+      } finally {
+        this.loading = false
       }
     },
 
-    updateQuantity(itemId: number, quantity: number) {
-      const item = this.items.find((i: any) => i.id === itemId)
-      if (item) {
-        item.quantity = quantity
-        if (quantity <= 0) {
-          this.removeItem(itemId)
-        }
+    async addItem(productId: string, quantity: number = 1, variant?: string) {
+      if (!this.clientId) {
+        console.warn('ClientId não definido')
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.addToCart(this.clientId, {
+          productId,
+          quantity,
+          variant,
+        })
+        
+        // Atualizar carrinho localmente
+        await this.fetchCart()
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao adicionar ao carrinho'
+        throw error
+      } finally {
+        this.loading = false
       }
     },
 
-    removeItem(itemId: number) {
-      const index = this.items.findIndex((item: any) => item.id === itemId)
-      if (index > -1) {
-        this.items.splice(index, 1)
+    async updateQuantity(itemId: string, quantity: number) {
+      if (!this.clientId) {
+        console.warn('ClientId não definido')
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.updateCartItem(this.clientId, itemId, quantity)
+        
+        // Atualizar carrinho localmente
+        await this.fetchCart()
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao atualizar quantidade'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async removeItem(itemId: string) {
+      if (!this.clientId) {
+        console.warn('ClientId não definido')
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.removeFromCart(this.clientId, itemId)
+        
+        // Atualizar carrinho localmente
+        await this.fetchCart()
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao remover item'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async clearCart() {
+      if (!this.clientId) {
+        console.warn('ClientId não definido')
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.clearCart(this.clientId)
+        this.items = []
+        this.cart = null
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao limpar carrinho'
+        throw error
+      } finally {
+        this.loading = false
       }
     },
 
@@ -67,7 +170,10 @@ export const useCartStore = defineStore('cart', {
     closeCart() {
       this.isOpen = false
     },
+
+    clearError() {
+      this.error = null
+    },
   },
-  
-  persist: true
-}) 
+})
+ 

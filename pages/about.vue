@@ -9,7 +9,7 @@
     <section class="nossa-historia">
       <div class="content-wrapper">
         <h2>Nossa História</h2>
-        <p>Fundada em 2024, a CakeCup nasceu da paixão por criar momentos doces e especiais. Nossa jornada começou em uma pequena cozinha familiar e cresceu para se tornar uma referência em bolos artesanais e cupcakes personalizados.</p>
+        <p>Fundada em 2025, a CakeCup nasceu da paixão por criar momentos doces e especiais. Nossa jornada começou em uma pequena cozinha familiar e cresceu para se tornar uma referência em bolos artesanais e cupcakes personalizados.</p>
         
         <div class="valores-grid">
           <div class="valor-card">

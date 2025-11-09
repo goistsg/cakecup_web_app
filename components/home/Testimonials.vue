@@ -67,7 +67,7 @@ const testimonials = [
       position: absolute;
       top: -10px;
       left: 10px;
-      color: #ff4081;
+      color: var(--primary);
       opacity: 0.2;
     }
 

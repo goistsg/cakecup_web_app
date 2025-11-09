@@ -1,37 +1,80 @@
 <template>
   <section class="featured">
     <h2>Nossos Destaques</h2>
-    <div class="products-grid">
-      <div v-for="product in featuredProducts" :key="product.id" class="product-card">
-        <img :src="product.image" :alt="product.name">
-        <h3>{{ product.name }}</h3>
-        <p>{{ product.description }}</p>
-      </div>
+    
+    <div v-if="loading" class="loading">
+      <p>Carregando produtos...</p>
+    </div>
+
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <button @click="loadProducts">Tentar novamente</button>
+    </div>
+
+    <div v-else class="products-grid">
+      <ProductCard 
+        v-for="product in displayProducts" 
+        :key="product.id" 
+        :product="product" 
+      />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-const featuredProducts = [
+import { computed, onMounted } from 'vue'
+import { useStorePublic } from '~/composables/useStorePublic'
+import { useCompany } from '~/composables/useCompany'
+import ProductCard from '~/components/common/ProductCard.vue'
+
+// Store pública (sem autenticação necessária)
+const { featuredProducts, loading, error, fetchProducts } = useStorePublic()
+const { companyId } = useCompany()
+
+// Produtos de fallback caso a API falhe
+const fallbackProducts = [
   {
-    id: 1,
+    id: '1',
     name: 'Cupcake de Chocolate Belga',
     description: 'Cupcake de chocolate belga com cobertura de ganache',
-    image: '/products/CCB001.png'
+    price: 8.50,
+    images: [{ id: '1', url: '/products/CCB001.png', isPrimary: true, productId: '1' }],
+    isActive: true
   },
   {
-    id: 2,
+    id: '2',
     name: 'Red Velvet Tradicional',
     description: 'Cupcake red velvet com cream cheese',
-    image: '/products/RVT002.png'
+    price: 9.00,
+    images: [{ id: '2', url: '/products/RVT002.png', isPrimary: true, productId: '2' }],
+    isActive: true
   },
   {
-    id: 3,
+    id: '3',
     name: 'Pistache Premium',
     description: 'Cupcake de pistache com cobertura de creme de pistache',
-    image: '/products/PST006.png'
+    price: 12.00,
+    images: [{ id: '3', url: '/products/PST006.png', isPrimary: true, productId: '3' }],
+    isActive: true
   }
 ]
+
+const displayProducts = computed(() => {
+  // Se tiver produtos da API, usar eles, senão usar fallback
+  return featuredProducts.value.length > 0 ? featuredProducts.value : fallbackProducts
+})
+
+const loadProducts = async () => {
+  try {
+    await fetchProducts()
+  } catch (err) {
+    console.error('Erro ao carregar produtos:', err)
+  }
+}
+
+onMounted(() => {
+  loadProducts()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -42,6 +85,36 @@ const featuredProducts = [
   h2 {
     text-align: center;
     margin-bottom: 3rem;
+    font-size: 2.5rem;
+    color: #333;
+  }
+
+  .loading, .error {
+    text-align: center;
+    padding: 3rem;
+    max-width: 600px;
+    margin: 0 auto;
+
+    p {
+      font-size: 1.2rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      padding: 0.75rem 2rem;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+
+      &:hover {
+        background-color: var(--primary-dark);
+      }
+    }
   }
 
   .products-grid {
@@ -50,35 +123,6 @@ const featuredProducts = [
     gap: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-  }
-
-  .product-card {
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
-
-    &:hover {
-      transform: translateY(-5px);
-    }
-
-    img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-    }
-
-    h3, p {
-      padding: 0.5rem 1rem;
-    }
-
-    .price {
-      display: block;
-      padding: 1rem;
-      font-weight: bold;
-      color: #ff4081;
-    }
   }
 }
 </style> 

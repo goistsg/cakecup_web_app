@@ -1,0 +1,61 @@
+# ============================================
+# Docker Compose - CakeCup Web App
+# Para desenvolvimento e testes locais
+# ============================================
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # Nuxt App
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cakecup-web-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # API Configuration
+      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-https://vendabela.onrender.com/app/v1}
+      - NUXT_PUBLIC_COMPANY_ID=${NUXT_PUBLIC_COMPANY_ID}
+      
+      # Node Environment
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ==========================================
+# Networks (optional)
+# ==========================================
+networks:
+  default:
+    name: cakecup-network
+

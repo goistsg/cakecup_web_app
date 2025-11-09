@@ -7,15 +7,15 @@
       </div>
       <div class="filters">
         <div class="select-wrapper">
-          <select v-model="saborAtual">
-            <option value="">Todos os sabores</option>
-            <option value="chocolate">Chocolate</option>
-            <option value="red velvet">Red Velvet</option>
-            <option value="limão siciliano">Limão Siciliano</option>
-            <option value="baunilha">Baunilha</option>
-            <option value="maracujá">Maracujá</option>
-            <option value="pistache">Pistache</option>
-            <option value="coco">Coco</option>
+          <select v-model="categoriaAtual">
+            <option value="">Todas as categorias</option>
+            <option 
+              v-for="category in categories" 
+              :key="category.id" 
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
           </select>
           <span class="select-icon">▼</span>
         </div>
@@ -30,15 +30,15 @@
     <!-- Error state -->
     <div v-else-if="error" class="error-state">
       <p>{{ error }}</p>
-      <button @click="fetchProdutos">Tentar novamente</button>
+      <button @click="() => fetchProducts()">Tentar novamente</button>
     </div>
 
     <!-- Products grid -->
     <section v-else class="produtos-grid">
-      <div v-for="product in produtosFiltrados" 
+      <div v-for="product in filteredProducts" 
            :key="product.id" 
            class="produto-card">
-        <img :src="images[product.sku].url" 
+        <img :src="getProductImage(product)" 
              :alt="product.name">
         <div class="produto-info">
           <h3>{{ product.name }}</h3>
@@ -52,88 +52,129 @@
               <button @click="aumentarQuantidade(product.id)" 
                       class="quantidade-btn">+</button>
             </div>
-            <AppButton @click="adicionarAoCarrinho(product)" class="app-button">
+            <button @click="adicionarAoCarrinho(product)" class="add-btn">
               Adicionar
-            </AppButton>
+            </button>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Indicador flutuante do carrinho -->
-    <div v-if="cartStore.items.length > 0" 
+    <div v-if="cartItems.length > 0" 
          class="cart-indicator"
-         @click="cartStore.openCart">
-      <span class="cart-count">{{ cartStore.totalItems }}</span>
-      <span class="cart-total">{{ cartStore.formattedTotal }}</span>
+         @click="openCart">
+      <span class="cart-count">{{ totalItems }}</span>
+      <span class="cart-total">{{ formattedTotal }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useCartStore } from '~/stores/cart'
-import { useProducts } from '@/composables/useProducts'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useCart } from '~/composables/useCart'
+import { useStorePublic } from '~/composables/useStorePublic'
+import { useAuth } from '~/composables/useAuth'
+import { useCompany } from '~/composables/useCompany'
+import type { Product } from '~/types/api'
 
-const cartStore = useCartStore()
-const saborAtual = ref('')
-const quantidades = ref(new Map())
+// Carrinho (pode funcionar sem autenticação)
+const { 
+  items: cartItems, 
+  totalItems, 
+  formattedTotal, 
+  addItem, 
+  openCart 
+} = useCart()
 
-const images = ref<{ [key: string]: { url: string } }>({
-  'CCB001': { url: 'http://localhost:3000/products/CCB001.png' },
-  'RVT002': { url: 'http://localhost:3000/products/RVT002.png' },
-  'BMS003': { url: 'http://localhost:3000/products/BMS003.png' },
-  'LMS004': { url: 'http://localhost:3000/products/LMS004.png' },
-  'DLV005': { url: 'http://localhost:3000/products/DLV005.jpg' },
-  'PST006': { url: 'http://localhost:3000/products/PST006.png' },
-  'BRG007': { url: 'http://localhost:3000/products/BRG007.jpg' },
-  'MCB008': { url: 'http://localhost:3000/products/MCB008.jpg' },
-  'CDL009': { url: 'http://localhost:3000/products/CDL009.jpg' },
-  'NTA010': { url: 'http://localhost:3000/products/NTA010.jpg' },
-})
+// Store pública (sem autenticação necessária)
+const { 
+  products, 
+  categories,
+  loading, 
+  error, 
+  fetchProducts,
+  fetchCategories,
+  setSelectedCategory,
+  filteredProducts
+} = useStorePublic()
 
-// Usando o composable de produtos
-const { produtos, loading, error, fetchProdutos } = useProducts()
+// Autenticação (opcional)
+const { user } = useAuth()
 
-// Carregar produtos quando o componente for montado
-onMounted(() => {
-  fetchProdutos()
+// Company ID
+const { companyId } = useCompany()
+
+const categoriaAtual = ref('')
+const quantidades = ref(new Map<string, number>())
+
+// Carregar produtos e categorias quando o componente for montado
+onMounted(async () => {
+  try {
+    // Buscar produtos e categorias da loja pública
+    await Promise.all([
+      fetchProducts(),
+      fetchCategories()
+    ])
+  } catch (err) {
+    console.error('Erro ao carregar dados:', err)
+  }
 })
 
 // Função para obter a quantidade de um produto
-const getQuantidade = (produtoId: number) => {
+const getQuantidade = (produtoId: string) => {
   return quantidades.value.get(produtoId) || 1
 }
 
 // Funções para controlar a quantidade
-const aumentarQuantidade = (produtoId: number) => {
+const aumentarQuantidade = (produtoId: string) => {
   const atual = getQuantidade(produtoId)
   quantidades.value.set(produtoId, atual + 1)
 }
 
-const diminuirQuantidade = (produtoId: number) => {
+const diminuirQuantidade = (produtoId: string) => {
   const atual = getQuantidade(produtoId)
   if (atual > 1) {
     quantidades.value.set(produtoId, atual - 1)
   }
 }
 
-const produtosFiltrados = computed(() => {
-  // return produtos.value
-  if (!saborAtual.value) return produtos.value
-  return produtos.value.filter(p => p.flavor === saborAtual.value)
+// Observar mudanças na categoria selecionada
+watch(categoriaAtual, (newCategory) => {
+  setSelectedCategory(newCategory || null)
 })
 
-const adicionarAoCarrinho = (product: any) => {
-  cartStore.addItem({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    quantity: getQuantidade(product.id),
-    image: product.image_url
-  })
-  quantidades.value.set(product.id, 1)
-  cartStore.openCart()
+// Obter imagem do produto
+const getProductImage = (product: Product) => {
+  if (product.images && product.images.length > 0) {
+    const primaryImage = product.images.find(img => img.isPrimary)
+    return primaryImage?.url || product.images[0].url
+  }
+  // Fallback para imagens locais
+  if (product.sku) {
+    return `/products/${product.sku}.png`
+  }
+  return '/products/photo_default.png'
+}
+
+const adicionarAoCarrinho = async (product: Product) => {
+  try {
+    const quantidade = getQuantidade(product.id)
+    
+    if (user.value?.id) {
+      // Com autenticação: adiciona ao carrinho do servidor
+      await addItem(product.id, quantidade)
+    } else {
+      // Sem autenticação: adiciona ao carrinho local
+      console.log('Produto adicionado ao carrinho local:', product.name)
+      // TODO: Implementar carrinho local (localStorage)
+    }
+    
+    quantidades.value.set(product.id, 1)
+    openCart()
+  } catch (err) {
+    console.error('Erro ao adicionar ao carrinho:', err)
+  }
 }
 </script>
 
@@ -239,7 +280,7 @@ const adicionarAoCarrinho = (product: any) => {
 
       h3 {
         margin-bottom: 0.5rem;
-        color: #ff4081;
+        color: var(--secondary);
       }
 
       p {
@@ -267,7 +308,7 @@ const adicionarAoCarrinho = (product: any) => {
             width: 24px;
             height: 24px;
             border: 1px solid var(--primary-color);
-            background: #ff4081;
+            background: var(--secondary);
             color: white;
             border-radius: 4px;
             cursor: pointer;
@@ -276,7 +317,7 @@ const adicionarAoCarrinho = (product: any) => {
             justify-content: center;
             
             &:hover {
-              background: #ff4081;
+              background: var(--secondary);
               color: white;
             }
           }
@@ -287,29 +328,29 @@ const adicionarAoCarrinho = (product: any) => {
           }
         }
 
-        :deep(.app-button) {
+        .add-btn {
           background-color: white;
-          color: #ff4081;
+          color: var(--secondary);
           padding: 0.75rem 1.5rem;
           border-radius: 30px;
-          border: none;
+          border: 2px solid var(--secondary);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           transition: all 0.3s ease;
           cursor: pointer;
-          box-shadow: 0 2px 4px #ff4081;
+          box-shadow: 0 2px 4px rgba(255, 64, 129, 0.2);
 
           &:hover {
-            background-color: #ff4081;
+            background-color: var(--secondary);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px rgba(255, 64, 129, 0.4);
           }
 
           &:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(255, 64, 129, 0.2);
           }
         }
       }
