@@ -13,6 +13,13 @@ export default defineNuxtConfig({
     }
   },
 
+  // Configuração para produção (Render)
+  nitro: {
+    preset: 'node-server',
+    serveStatic: true,
+    compressPublicAssets: true,
+  },
+
   app: {
     head: {
       title: 'CakeCup - Cupcakes Artesanais',
