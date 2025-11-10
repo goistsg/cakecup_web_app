@@ -45,11 +45,9 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=builder --chown=nuxt:nodejs /app/.output /app/.output
 COPY --from=builder --chown=nuxt:nodejs /app/package*.json /app/
 
-# Copy public files to the location Nitro expects
-# First copy static files from public/
-COPY --from=builder --chown=nuxt:nodejs /app/public /app/.output/server/chunks/public
-# Then copy built assets from .output/public/ (includes _nuxt/)
+# Merge public files: copy .output/public first (has _nuxt), then overlay with /public (has images)
 COPY --from=builder --chown=nuxt:nodejs /app/.output/public /app/.output/server/chunks/public
+COPY --from=builder --chown=nuxt:nodejs /app/public /app/.output/server/chunks/public
 
 # Set environment variables
 ENV NODE_ENV=production
