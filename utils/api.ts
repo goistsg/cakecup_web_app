@@ -75,10 +75,10 @@ class ApiService {
     })
   }
 
-  async verifyOtp(whatsapp: string, otp: string) {
+  async verifyOtp(whatsapp: string, otpCode: string) {
     return this.request<{ user: any; token: string; message: string }>('/auth/verify-otp', {
       method: 'POST',
-      body: { whatsapp, otp },
+      body: { whatsapp, otpCode },
     })
   }
 

@@ -7,6 +7,7 @@
 
 import { defineStore } from 'pinia'
 import type { Product, Category } from '~/types/api'
+import { api } from '~/utils/api'
 
 interface StorePublicState {
   // Produtos
@@ -99,7 +100,7 @@ export const useStorePublicStore = defineStore('storePublic', {
             break
           case 'newest':
             filtered.sort((a, b) => 
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
             )
             break
         }
@@ -131,7 +132,7 @@ export const useStorePublicStore = defineStore('storePublic', {
      * Produtos em destaque
      */
     highlightedProducts: (state): Product[] => {
-      return state.products.filter(p => p.isHighlighted && p.isActive)
+      return state.products.filter(p => (p as any).isHighlighted && p.isActive)
     },
 
     /**
@@ -174,31 +175,11 @@ export const useStorePublicStore = defineStore('storePublic', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const apiBase = config.public.apiBase as string
-        
-        // Query params
-        const params = new URLSearchParams()
-        if (companyId) params.append('companyId', companyId)
-        
-        const url = `${apiBase}/products?${params.toString()}`
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar produtos: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        this.products = Array.isArray(data) ? data : (data.data || [])
+        const response = await api.getProducts(companyId)
+        this.products = Array.isArray(response) ? response : (response.data || [])
         
         // Atualizar produtos em destaque
-        this.featuredProducts = this.products.filter(p => p.isHighlighted && p.isActive).slice(0, 8)
+        this.featuredProducts = this.products.filter(p => (p as any).isHighlighted && p.isActive).slice(0, 8)
         
         // Calcular total de páginas
         this.totalPages = Math.ceil(this.filteredProducts.length / this.itemsPerPage)
@@ -221,21 +202,8 @@ export const useStorePublicStore = defineStore('storePublic', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const apiBase = config.public.apiBase as string
-        
-        const response = await fetch(`${apiBase}/products/${id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar produto: ${response.statusText}`)
-        }
-
-        const data = await response.json()
+        const response = await api.getProduct(id)
+        const data = Array.isArray(response) ? response[0] : (response.data || response)
         this.currentProduct = data
         
         return data
@@ -256,28 +224,8 @@ export const useStorePublicStore = defineStore('storePublic', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const apiBase = config.public.apiBase as string
-        
-        // Query params
-        const params = new URLSearchParams()
-        if (companyId) params.append('companyId', companyId)
-        
-        const url = `${apiBase}/categories?${params.toString()}`
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar categorias: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        this.categories = Array.isArray(data) ? data : (data.data || [])
+        const response = await api.getCategories(companyId)
+        this.categories = Array.isArray(response) ? response : (response.data || [])
         
         return this.categories
       } catch (err: any) {
@@ -297,21 +245,8 @@ export const useStorePublicStore = defineStore('storePublic', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const apiBase = config.public.apiBase as string
-        
-        const response = await fetch(`${apiBase}/categories/${id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar categoria: ${response.statusText}`)
-        }
-
-        const data = await response.json()
+        const response = await api.getCategory(id)
+        const data = Array.isArray(response) ? response[0] : (response.data || response)
         this.currentCategory = data
         
         return data
@@ -332,28 +267,8 @@ export const useStorePublicStore = defineStore('storePublic', {
       this.error = null
 
       try {
-        const config = useRuntimeConfig()
-        const apiBase = config.public.apiBase as string
-        
-        const params = new URLSearchParams()
-        params.append('categoryId', categoryId)
-        if (companyId) params.append('companyId', companyId)
-        
-        const url = `${apiBase}/products?${params.toString()}`
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar produtos: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        const products = Array.isArray(data) ? data : (data.data || [])
+        const response = await api.getProducts(companyId, categoryId)
+        const products = Array.isArray(response) ? response : (response.data || [])
         
         // Armazenar produtos por categoria
         this.productsByCategory[categoryId] = products
