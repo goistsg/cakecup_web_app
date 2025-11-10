@@ -46,7 +46,10 @@ COPY --from=builder --chown=nuxt:nodejs /app/.output /app/.output
 COPY --from=builder --chown=nuxt:nodejs /app/package*.json /app/
 
 # Copy public files to the location Nitro expects
+# First copy static files from public/
 COPY --from=builder --chown=nuxt:nodejs /app/public /app/.output/server/chunks/public
+# Then copy built assets from .output/public/ (includes _nuxt/)
+COPY --from=builder --chown=nuxt:nodejs /app/.output/public /app/.output/server/chunks/public
 
 # Set environment variables
 ENV NODE_ENV=production
