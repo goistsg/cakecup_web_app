@@ -33,6 +33,14 @@ class ApiService {
       headers['Authorization'] = `Bearer ${token}`
     }
 
+    // Adicionar company-id header se disponível
+    if (process.client) {
+      const config = useRuntimeConfig()
+      if (config.public.companyId) {
+        headers['company-id'] = config.public.companyId as string
+      }
+    }
+
     return headers
   }
 
@@ -84,17 +92,16 @@ class ApiService {
     })
   }
 
-  // Products
+  // Products (Store - sem autenticação)
   async getProducts(companyId?: string, categoryId?: string) {
     const query: Record<string, any> = {}
-    if (companyId) query.companyId = companyId
     if (categoryId) query.categoryId = categoryId
     
-    return this.request<any>('/products', { query })
+    return this.request<any>('/store/products', { query })
   }
 
   async getProduct(id: string) {
-    return this.request<any>(`/products/${id}`)
+    return this.request<any>(`/store/products/${id}`)
   }
 
   async createProduct(data: any) {
@@ -117,12 +124,9 @@ class ApiService {
     })
   }
 
-  // Categories
+  // Categories (Store - sem autenticação)
   async getCategories(companyId?: string) {
-    const query: Record<string, any> = {}
-    if (companyId) query.companyId = companyId
-    
-    return this.request<any>('/categories', { query })
+    return this.request<any>('/store/categories')
   }
 
   async getCategory(id: string) {
