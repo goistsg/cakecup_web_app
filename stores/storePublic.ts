@@ -6,8 +6,24 @@
  */
 
 import { defineStore } from 'pinia'
-import type { Product, Category } from '~/types/api'
+import type { StoreProduct } from '~/types/api'
 import { api } from '~/utils/api'
+
+// Adaptador para converter StoreProduct em Product
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  sku: string
+  category: string
+  images: Array<{ url: string; isPrimary: boolean }>
+  isActive: boolean
+  stock: number
+  hasSample: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 interface StorePublicState {
   // Produtos
@@ -16,9 +32,9 @@ interface StorePublicState {
   productsByCategory: Record<string, Product[]>
   currentProduct: Product | null
   
-  // Categorias
-  categories: Category[]
-  currentCategory: Category | null
+  // Categorias (agora são strings)
+  categories: string[]
+  currentCategory: string | null
   
   // Filtros e busca
   searchQuery: string
@@ -66,9 +82,9 @@ export const useStorePublicStore = defineStore('storePublic', {
     filteredProducts: (state): Product[] => {
       let filtered = [...state.products]
 
-      // Filtrar por categoria
+      // Filtrar por categoria (agora é string)
       if (state.selectedCategoryId) {
-        filtered = filtered.filter(p => p.categoryId === state.selectedCategoryId)
+        filtered = filtered.filter(p => p.category === state.selectedCategoryId)
       }
 
       // Filtrar por busca
@@ -136,10 +152,10 @@ export const useStorePublicStore = defineStore('storePublic', {
     },
 
     /**
-     * Categorias ativas
+     * Categorias ativas (todas são ativas)
      */
-    activeCategories: (state): Category[] => {
-      return state.categories.filter(c => c.isActive)
+    activeCategories: (state): string[] => {
+      return state.categories
     },
 
     /**
@@ -147,7 +163,7 @@ export const useStorePublicStore = defineStore('storePublic', {
      */
     getProductsByCategory: (state) => {
       return (categoryId: string): Product[] => {
-        return state.products.filter(p => p.categoryId === categoryId && p.isActive)
+        return state.products.filter(p => p.category === categoryId && p.isActive)
       }
     },
 
@@ -176,10 +192,26 @@ export const useStorePublicStore = defineStore('storePublic', {
 
       try {
         const response = await api.getProducts(companyId)
-        this.products = Array.isArray(response) ? response : (response.data || [])
         
-        // Atualizar produtos em destaque
-        this.featuredProducts = this.products.filter(p => (p as any).isHighlighted && p.isActive).slice(0, 8)
+        // Converter StoreProduct para Product
+        const storeProducts = response.data || []
+        this.products = storeProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.salePrice,
+          sku: p.sku,
+          category: p.category,
+          images: p.imageUrls.map((url: string) => ({ url, isPrimary: true })),
+          isActive: true,
+          stock: p.stock,
+          hasSample: p.hasSample,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt
+        }))
+        
+        // Atualizar produtos em destaque (primeiros 8)
+        this.featuredProducts = this.products.slice(0, 8)
         
         // Calcular total de páginas
         this.totalPages = Math.ceil(this.filteredProducts.length / this.itemsPerPage)
@@ -225,7 +257,8 @@ export const useStorePublicStore = defineStore('storePublic', {
 
       try {
         const response = await api.getCategories(companyId)
-        this.categories = Array.isArray(response) ? response : (response.data || [])
+        // API retorna array de strings diretamente
+        this.categories = Array.isArray(response) ? response : []
         
         return this.categories
       } catch (err: any) {

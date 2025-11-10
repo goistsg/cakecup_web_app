@@ -90,6 +90,33 @@ export interface UpdateCompanyDto {
 }
 
 // ==================== Product ====================
+// Produto da API Store (público)
+export interface StoreProduct {
+  id: string
+  name: string
+  category: string // Nome da categoria (não ID)
+  sku: string
+  description: string
+  imageUrls: string[]
+  salePrice: number
+  stock: number
+  hasSample: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// Resposta da API Store Products
+export interface StoreProductsResponse {
+  data: StoreProduct[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+// Produto original (admin/autenticado)
 export interface Product {
   id: string
   name: string

@@ -95,7 +95,7 @@ class ApiService {
   // Products (Store - sem autenticação)
   async getProducts(companyId?: string, categoryId?: string) {
     const query: Record<string, any> = {}
-    if (categoryId) query.categoryId = categoryId
+    if (categoryId) query.category = categoryId // API usa 'category' não 'categoryId'
     
     return this.request<any>('/store/products', { query })
   }
@@ -124,9 +124,9 @@ class ApiService {
     })
   }
 
-  // Categories (Store - sem autenticação)
+  // Categories (Store - sem autenticação) - Retorna array de strings
   async getCategories(companyId?: string) {
-    return this.request<any>('/store/categories')
+    return this.request<string[]>('/store/categories')
   }
 
   async getCategory(id: string) {
