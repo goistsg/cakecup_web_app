@@ -44,7 +44,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy built application from builder
 COPY --from=builder --chown=nuxt:nodejs /app/.output /app/.output
 COPY --from=builder --chown=nuxt:nodejs /app/package*.json /app/
-COPY --from=builder --chown=nuxt:nodejs /app/public /app/public
+
+# Copy public files to the location Nitro expects
+COPY --from=builder --chown=nuxt:nodejs /app/public /app/.output/server/chunks/public
 
 # Set environment variables
 ENV NODE_ENV=production

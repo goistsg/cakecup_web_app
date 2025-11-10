@@ -15,14 +15,7 @@ export default defineNuxtConfig({
 
   // Configuração para produção (Render)
   nitro: {
-    preset: 'node-server',
-    publicAssets: [
-      {
-        baseURL: '/',
-        dir: '../public',
-        maxAge: 60 * 60 * 24 * 365 // 1 year
-      }
-    ]
+    preset: 'node-server'
   },
 
   app: {
