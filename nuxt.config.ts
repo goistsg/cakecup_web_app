@@ -15,9 +15,12 @@ export default defineNuxtConfig({
 
   // Configuração para produção (Render)
   nitro: {
-    preset: 'node-server',
-    serveStatic: true,
-    compressPublicAssets: true,
+    preset: 'node-server'
+  },
+
+  // Servir arquivos estáticos corretamente
+  experimental: {
+    payloadExtraction: false
   },
 
   app: {
