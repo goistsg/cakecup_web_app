@@ -48,19 +48,6 @@
           <PaymentSelector
             @update:method="selectedPaymentMethod = $event"
           />
-
-          <!-- 4. Observações -->
-          <div class="notes-section">
-            <h2>
-              <i class="fas fa-comment-dots"></i>
-              Observações
-            </h2>
-            <textarea 
-              v-model="orderNotes"
-              placeholder="Alguma observação especial sobre seu pedido? (opcional)"
-              rows="4"
-            ></textarea>
-          </div>
         </div>
 
         <!-- Coluna Lateral - Resumo -->
@@ -138,7 +125,6 @@ const selectedPaymentMethod = ref<PaymentMethod | null>(null)
 const deliveryMethod = ref<string | null>(null)
 const deliveryFee = ref<number | null>(null)
 const estimatedDays = ref<number | null>(null)
-const orderNotes = ref('')
 const processingOrder = ref(false)
 const error = ref<string>('')
 
@@ -365,50 +351,6 @@ onMounted(async () => {
   }
 }
 
-// Observações
-.notes-section {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    color: var(--primary);
-    font-size: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
-
-    i {
-      font-size: 1.3rem;
-    }
-  }
-
-  textarea {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    font-family: inherit;
-    font-size: 1rem;
-    resize: vertical;
-    min-height: 100px;
-    transition: border-color 0.3s;
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    &::placeholder {
-      color: #999;
-    }
-  }
-}
-
 // Botão de Finalizar
 .btn-checkout {
   width: 100%;
@@ -589,7 +531,6 @@ onMounted(async () => {
     gap: 1.5rem;
   }
 
-  .notes-section,
   .checkout-sidebar > * {
     border-radius: 12px;
     padding: 1.5rem;

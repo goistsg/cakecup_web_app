@@ -14,15 +14,13 @@
           <li><NuxtLink to="/contact">Contato</NuxtLink></li>
           
           <!-- Links autenticados -->
-          <template v-if="isAuthenticated">
-            <li><NuxtLink to="/orders" class="nav-link-special">Meus Pedidos</NuxtLink></li>
-          </template>
+          <li v-if="isMounted && isAuthenticated"><NuxtLink to="/orders" class="nav-link-special">Meus Pedidos</NuxtLink></li>
         </ul>
       </nav>
 
       <div class="header__actions">
         <!-- Botão de Login/Perfil -->
-        <div class="header__user">
+        <div v-if="isMounted" class="header__user">
           <NuxtLink v-if="!isAuthenticated" to="/login" class="btn-login">
             <i class="fas fa-user"></i>
             <span>Entrar</span>
@@ -52,7 +50,7 @@
         </div>
 
         <!-- Carrinho -->
-        <div class="header__cart">
+        <div v-if="isMounted" class="header__cart">
           <button @click="cartStore.openCart()" class="cart-icon">
             <i class="fas fa-shopping-cart"></i>
             <span class="cart-count">
@@ -70,10 +68,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '~/stores/cart'
 import { useAuth } from '~/composables/useAuth'
+import { useClientMounted } from '~/composables/useClientMounted'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const { isAuthenticated, user, logout } = useAuth()
+const { isMounted } = useClientMounted()
 
 const showUserMenu = ref(false)
 
@@ -234,9 +234,19 @@ if (process.client) {
       text-decoration: none;
       font-weight: 600;
       transition: all 0.3s ease;
+      line-height: 1.4;
 
       i {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        vertical-align: middle;
+      }
+
+      span {
+        line-height: 1;
       }
 
       &:hover {
@@ -261,9 +271,19 @@ if (process.client) {
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
+      line-height: 1.4;
 
       i {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        vertical-align: middle;
+      }
+
+      span {
+        line-height: 1;
       }
 
       &:hover {
@@ -296,10 +316,17 @@ if (process.client) {
         cursor: pointer;
         transition: background-color 0.2s ease;
         text-align: left;
+        line-height: 1.4;
 
         i {
           color: var(--primary);
           width: 20px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          vertical-align: middle;
+          flex-shrink: 0;
         }
 
         &:hover {
@@ -330,6 +357,11 @@ if (process.client) {
       color: var(--text);
       transition: color 0.3s ease;
       position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px; // Touch target size
+      min-height: 44px; // Touch target size
       
       &:hover {
         color: var(--primary);
@@ -337,23 +369,29 @@ if (process.client) {
 
       i {
         font-size: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        vertical-align: middle;
       }
     }
 
     .cart-count {
       position: absolute;
-      top: -8px;
-      right: -8px;
+      top: 0;
+      right: 0;
       background-color: var(--secondary);
       color: white;
       border-radius: 50%;
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: bold;
+      line-height: 1;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       animation: scaleIn 0.3s ease;
     }
@@ -391,6 +429,10 @@ if (process.client) {
       font-size: 1.5rem;
     }
 
+    &__actions {
+      gap: 0.5rem;
+    }
+
     &__user {
       .btn-login span,
       .user-button span {
@@ -401,9 +443,33 @@ if (process.client) {
       .user-button {
         padding: 0.5rem;
         border-radius: 50%;
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         justify-content: center;
+        
+        i {
+          font-size: 1.2rem;
+        }
+      }
+    }
+
+    &__cart {
+      .cart-icon {
+        padding: 0.5rem;
+        width: 44px;
+        height: 44px;
+        
+        i {
+          font-size: 1.4rem;
+        }
+      }
+
+      .cart-count {
+        top: 2px;
+        right: 2px;
+        width: 18px;
+        height: 18px;
+        font-size: 0.65rem;
       }
     }
   }

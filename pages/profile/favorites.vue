@@ -16,48 +16,25 @@
     </div>
 
     <!-- Lista de Favoritos -->
-    <div v-else-if="!loading && productsWithFavorites.length > 0" class="favorites-grid">
-      <div v-for="product in productsWithFavorites" :key="product.id" class="favorite-card">
-        <!-- Imagem do Produto -->
-        <div class="product-image">
-          <img :src="getProductImage(product)" :alt="product.name">
-          <div class="product-badge" v-if="getProductStock(product) < 5 && getProductStock(product) > 0">Últimas unidades</div>
-          <div class="product-badge out-of-stock" v-if="getProductStock(product) === 0">Esgotado</div>
-          
-          <!-- Botão de Remover Favorito -->
-          <button class="remove-favorite-btn" @click="handleRemoveFavorite(product.id)" :disabled="removingId === product.id">
-            <i class="fas" :class="removingId === product.id ? 'fa-spinner fa-spin' : 'fa-heart-broken'"></i>
-          </button>
-        </div>
-
-        <!-- Informações do Produto -->
-        <div class="product-info">
-          <div class="product-header">
-            <span class="product-category">{{ product.category || 'Produto' }}</span>
-            <span class="product-sku" v-if="product.sku">{{ product.sku }}</span>
-          </div>
-          <h3>{{ product.name }}</h3>
-          <p class="product-description">{{ truncateDescription(product.description) }}</p>
-          
-          <!-- Preço e Ações -->
-          <div class="product-footer">
-            <div class="price-section">
-              <span class="price">R$ {{ getProductPrice(product).toFixed(2) }}</span>
-              <span class="price-unit">por unidade</span>
-            </div>
-            <div class="product-actions">
-              <button @click="addToCart(product)" class="add-to-cart-btn" :disabled="getProductStock(product) === 0">
-                <i class="fas fa-shopping-cart"></i>
-                {{ getProductStock(product) === 0 ? 'Esgotado' : 'Adicionar' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="!loading && productsWithFavorites.length > 0 && isMounted" class="favorites-grid">
+      <ProductCard 
+        v-for="product in productsWithFavorites" 
+        :key="product.id" 
+        :product="product"
+        variant="complete"
+        :is-favorite="true"
+        :show-stock-badge="true"
+        :show-favorite-button="isMounted"
+        :show-quantity-control="true"
+        :show-category="true"
+        :show-sku="true"
+        @toggle-favorite="handleRemoveFavorite(product.id)"
+        @add-to-cart="handleAddToCart"
+      />
     </div>
 
     <!-- Estado Vazio -->
-    <div v-else-if="!loading && productsWithFavorites.length === 0" class="empty-state">
+    <div v-else-if="!loading && productsWithFavorites.length === 0 && isMounted" class="empty-state">
       <i class="fas fa-heart-broken"></i>
       <h2>Nenhum favorito ainda</h2>
       <p>Adicione produtos aos seus favoritos para encontrá-los facilmente depois</p>
@@ -84,6 +61,8 @@ import { useWishlist } from '~/composables/useWishlist'
 import { useCart } from '~/composables/useCart'
 import { useAuth } from '~/composables/useAuth'
 import { useRouter } from 'vue-router'
+import { useClientMounted } from '~/composables/useClientMounted'
+import ProductCard from '~/components/common/ProductCard.vue'
 
 definePageMeta({
   middleware: 'auth',
@@ -91,54 +70,28 @@ definePageMeta({
 
 const router = useRouter()
 const { user } = useAuth()
+const { isMounted } = useClientMounted()
 const { productsWithFavorites, favoritesCount, loading, error, fetchFavorites, removeFavorite, clearError } = useWishlist()
 const { addItem, openCart } = useCart()
 
-const removingId = ref<string | null>(null)
-
-const getProductImage = (product: any) => {
-  // Suportar tanto imageUrls (array) quanto imageUrl (string)
-  if (product.imageUrls && product.imageUrls.length > 0) {
-    return product.imageUrls[0]
-  }
-  if (product.imageUrl) {
-    return product.imageUrl
-  }
-  return '/products/photo_default.png'
-}
-
-const getProductPrice = (product: any) => {
-  // Suportar tanto salePrice quanto price
-  return product.salePrice || product.price || 0
-}
-
-const getProductStock = (product: any) => {
-  // Retornar stock ou assumir disponível se não informado
-  return product.stock !== undefined ? product.stock : 999
-}
-
-const truncateDescription = (description: string, maxLength: number = 100) => {
-  if (!description) return ''
-  return description.length > maxLength 
-    ? description.substring(0, maxLength) + '...' 
-    : description
-}
-
 const handleRemoveFavorite = async (productId: string) => {
   try {
-    removingId.value = productId
     await removeFavorite(productId)
   } catch (err: any) {
     console.error('Erro ao remover favorito:', err)
     alert(err.message || 'Erro ao remover favorito')
-  } finally {
-    removingId.value = null
   }
 }
 
-const addToCart = async (product: any) => {
+const handleAddToCart = async (productId: string, quantity: number) => {
   try {
-    const stock = getProductStock(product)
+    const product = productsWithFavorites.value.find(p => p.id === productId)
+    if (!product) {
+      alert('Produto não encontrado')
+      return
+    }
+
+    const stock = product.stock !== undefined ? product.stock : 999
     
     if (stock === 0) {
       alert('Produto esgotado!')
@@ -151,7 +104,7 @@ const addToCart = async (product: any) => {
       return
     }
 
-    await addItem(product.id, 1)
+    await addItem(productId, quantity)
     openCart()
   } catch (err: any) {
     console.error('Erro ao adicionar ao carrinho:', err)
@@ -196,9 +149,14 @@ onMounted(async () => {
     font-size: 2.5rem;
     color: var(--primary);
     margin-bottom: 0.5rem;
+    line-height: 1.2;
 
     i {
       font-size: 2rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
       animation: heartbeat 1.5s ease-in-out infinite;
     }
   }
@@ -314,6 +272,11 @@ onMounted(async () => {
     i {
       font-size: 1.2rem;
       color: #e74c3c;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      vertical-align: middle;
     }
 
     &:hover:not(:disabled) {
@@ -415,10 +378,15 @@ onMounted(async () => {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
 
         i {
-          font-size: 1.1rem;
+          font-size: 1rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          vertical-align: middle;
         }
 
         &:hover:not(:disabled) {
@@ -477,11 +445,16 @@ onMounted(async () => {
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 
     i {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      vertical-align: middle;
     }
 
     &:hover {

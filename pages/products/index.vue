@@ -81,7 +81,7 @@
     </div>
 
     <!-- Products grid -->
-    <section v-else class="produtos-grid">
+    <section v-if="!loading && !error && isMounted" class="produtos-grid">
       <!-- Mensagem quando não há produtos -->
       <div v-if="filteredProducts.length === 0" class="no-products">
         <i class="fas fa-search"></i>
@@ -92,79 +92,21 @@
         </button>
       </div>
 
-      <!-- Grid de produtos -->
-      <div v-for="product in filteredProducts" 
-           :key="product.id" 
-           class="produto-card">
-        <div class="produto-image">
-          <img :src="getProductImage(product)" 
-               :alt="product.name">
-          <div class="produto-badge" v-if="product.stock < 5 && product.stock > 0">
-            <i class="fas fa-exclamation-circle"></i>
-            Últimas unidades
-          </div>
-          <div class="produto-badge out-of-stock" v-if="product.stock === 0">
-            <i class="fas fa-times-circle"></i>
-            Esgotado
-          </div>
-          
-          <!-- Botão de Favoritar -->
-          <button 
-            class="favorite-btn" 
-            :class="{ 'is-favorite': isFavorite(product.id) }"
-            @click="toggleFavoriteProduct(product.id)"
-            :disabled="togglingFavorite === product.id"
-          >
-            <i class="fas" :class="togglingFavorite === product.id ? 'fa-spinner fa-spin' : (isFavorite(product.id) ? 'fa-heart' : 'fa-heart')"></i>
-          </button>
-        </div>
-
-        <div class="produto-info">
-          <div class="produto-header">
-            <span class="produto-category">{{ product.category }}</span>
-            <span class="produto-sku">{{ product.sku }}</span>
-          </div>
-          
-          <h3>{{ product.name }}</h3>
-          <p class="produto-description">{{ truncateDescription(product.description) }}</p>
-          
-          <div class="produto-footer">
-            <div class="preco-section">
-              <span class="preco">R$ {{ product.price.toFixed(2) }}</span>
-              <span class="preco-unit">por unidade</span>
-            </div>
-
-            <div class="produto-actions">
-              <div class="quantidade-controle">
-                <button 
-                  @click="diminuirQuantidade(product.id)" 
-                  class="quantidade-btn"
-                  :disabled="product.stock === 0"
-                >
-                  <i class="fas fa-minus"></i>
-                </button>
-                <span class="quantidade">{{ getQuantidade(product.id) }}</span>
-                <button 
-                  @click="aumentarQuantidade(product.id, product.stock)" 
-                  class="quantidade-btn"
-                  :disabled="product.stock === 0 || getQuantidade(product.id) >= product.stock"
-                >
-                  <i class="fas fa-plus"></i>
-                </button>
-              </div>
-
-              <button 
-                @click="adicionarAoCarrinho(product)" 
-                class="add-btn"
-                :disabled="product.stock === 0"
-              >
-                <i class="fas fa-shopping-cart"></i>
-                {{ product.stock === 0 ? 'Esgotado' : 'Adicionar' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Grid de produtos usando ProductCard unificado -->
+      <ProductCard 
+        v-for="product in filteredProducts" 
+        :key="product.id" 
+        :product="product"
+        variant="complete"
+        :is-favorite="isFavorite(product.id)"
+        :show-stock-badge="true"
+        :show-favorite-button="!!user && isMounted"
+        :show-quantity-control="true"
+        :show-category="true"
+        :show-sku="true"
+        @toggle-favorite="toggleFavoriteProduct(product.id)"
+        @add-to-cart="adicionarAoCarrinho"
+      />
     </section>
 
     <!-- Botão flutuante do carrinho -->
@@ -194,7 +136,12 @@ import { useStorePublic } from '~/composables/useStorePublic'
 import { useAuth } from '~/composables/useAuth'
 import { useCompany } from '~/composables/useCompany'
 import { useWishlist } from '~/composables/useWishlist'
+import { useClientMounted } from '~/composables/useClientMounted'
+import ProductCard from '~/components/common/ProductCard.vue'
 import type { Product } from '~/types/api'
+
+// Client mounted state
+const { isMounted } = useClientMounted()
 
 // Carrinho (pode funcionar sem autenticação)
 const { 
@@ -230,7 +177,6 @@ const { companyId } = useCompany()
 const categoriaAtual = ref('')
 const searchQuery = ref('')
 const sortBy = ref('')
-const quantidades = ref(new Map<string, number>())
 
 // Computed para verificar se há filtros ativos
 const hasActiveFilters = computed(() => {
@@ -267,31 +213,6 @@ onMounted(async () => {
   }
 })
 
-// Função para obter a quantidade de um produto
-const getQuantidade = (produtoId: string) => {
-  return quantidades.value.get(produtoId) || 1
-}
-
-// Funções para controlar a quantidade
-const aumentarQuantidade = (produtoId: string, stock: number = 999) => {
-  const atual = getQuantidade(produtoId)
-  
-  // Validar estoque
-  if (atual >= stock) {
-    alert(`Estoque máximo atingido! Apenas ${stock} unidades disponíveis.`)
-    return
-  }
-  
-  quantidades.value.set(produtoId, atual + 1)
-}
-
-const diminuirQuantidade = (produtoId: string) => {
-  const atual = getQuantidade(produtoId)
-  if (atual > 1) {
-    quantidades.value.set(produtoId, atual - 1)
-  }
-}
-
 // Observar mudanças nos filtros
 watch(categoriaAtual, (newCategory) => {
   setSelectedCategory(newCategory || null)
@@ -305,19 +226,6 @@ watch(searchQuery, (newQuery) => {
 watch(sortBy, (newSort) => {
   // Implementar ordenação
 })
-
-// Obter imagem do produto
-const getProductImage = (product: any) => {
-  if (product.images && product.images.length > 0) {
-    const primaryImage = product.images.find((img: any) => img.isPrimary)
-    return primaryImage?.url || product.images[0].url
-  }
-  // Fallback para imagens locais
-  if (product.sku) {
-    return `/products/${product.sku}.png`
-  }
-  return '/products/photo_default.png'
-}
 
 const toggleFavoriteProduct = async (productId: string) => {
   try {
@@ -352,17 +260,22 @@ const toggleFavoriteProduct = async (productId: string) => {
   }
 }
 
-const adicionarAoCarrinho = async (product: any) => {
+const adicionarAoCarrinho = async (productId: string, quantity: number) => {
   try {
+    // Buscar produto para validação
+    const product = filteredProducts.value.find(p => p.id === productId)
+    if (!product) {
+      alert('Produto não encontrado')
+      return
+    }
+    
     // Verificar estoque
     if (product.stock === 0) {
       alert('Produto esgotado')
       return
     }
-
-    const quantidade = getQuantidade(product.id)
     
-    if (quantidade > product.stock) {
+    if (quantity > product.stock) {
       alert(`Apenas ${product.stock} unidades disponíveis`)
       return
     }
@@ -376,10 +289,7 @@ const adicionarAoCarrinho = async (product: any) => {
     }
     
     // Adicionar ao carrinho no servidor
-    await addItem(product.id, quantidade)
-    
-    // Resetar quantidade
-    quantidades.value.set(product.id, 1)
+    await addItem(productId, quantity)
     
     // Abrir modal do carrinho
     openCart()
@@ -394,13 +304,6 @@ const adicionarAoCarrinho = async (product: any) => {
       alert(err.message || 'Erro ao adicionar produto ao carrinho')
     }
   }
-}
-
-// Truncar descrição
-const truncateDescription = (text: string, maxLength: number = 80) => {
-  if (!text) return ''
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
 }
 </script>
 
@@ -626,270 +529,7 @@ const truncateDescription = (text: string, maxLength: number = 80) => {
       }
     }
 
-    .produto-card {
-      background: white;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-      display: flex;
-      flex-direction: column;
-
-      &:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      }
-
-      .produto-image {
-        position: relative;
-        width: 100%;
-        height: 250px;
-        overflow: hidden;
-        background: var(--surface);
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.3s ease;
-        }
-
-        &:hover img {
-          transform: scale(1.05);
-        }
-
-        .produto-badge {
-          position: absolute;
-          top: 1rem;
-          right: 1rem;
-          padding: 0.5rem 1rem;
-          background: var(--accent);
-          color: white;
-          border-radius: 20px;
-          font-size: 0.85rem;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-
-          &.out-of-stock {
-            background: #666;
-          }
-
-          i {
-            font-size: 1rem;
-          }
-        }
-
-        .favorite-btn {
-          position: absolute;
-          bottom: 1rem;
-          right: 1rem;
-          width: 45px;
-          height: 45px;
-          border-radius: 50%;
-          background: white;
-          border: 2px solid #ddd;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-          z-index: 10;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-          i {
-            font-size: 1.2rem;
-            color: #ccc;
-            transition: all 0.3s ease;
-          }
-
-          &:hover:not(:disabled) {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-
-            i {
-              color: var(--primary);
-            }
-          }
-
-          &.is-favorite {
-            background: var(--primary);
-            border-color: var(--primary);
-
-            i {
-              color: white;
-              animation: heartbeat 0.6s ease-out;
-            }
-
-            &:hover:not(:disabled) {
-              background: var(--secondary);
-              border-color: var(--secondary);
-            }
-          }
-
-          &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-        }
-      }
-
-      .produto-info {
-        padding: 1.5rem;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-
-        .produto-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.75rem;
-
-          .produto-category {
-            padding: 0.25rem 0.75rem;
-            background: var(--surface);
-            color: var(--primary);
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-          }
-
-          .produto-sku {
-            font-size: 0.8rem;
-            color: #999;
-            font-weight: 500;
-          }
-        }
-
-        h3 {
-          font-size: 1.25rem;
-          color: var(--text);
-          margin-bottom: 0.5rem;
-          font-weight: 700;
-          line-height: 1.3;
-        }
-
-        .produto-description {
-          color: #666;
-          font-size: 0.9rem;
-          line-height: 1.5;
-          margin-bottom: 1rem;
-          flex: 1;
-        }
-
-        .produto-footer {
-          border-top: 1px solid var(--surface);
-          padding-top: 1rem;
-
-          .preco-section {
-            margin-bottom: 1rem;
-
-            .preco {
-              display: block;
-              font-size: 1.75rem;
-              font-weight: 700;
-              color: var(--primary);
-              margin-bottom: 0.25rem;
-            }
-
-            .preco-unit {
-              font-size: 0.8rem;
-              color: #999;
-            }
-          }
-
-          .produto-actions {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-
-            .quantidade-controle {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              padding: 0.5rem;
-              background: var(--surface);
-              border-radius: 50px;
-
-              .quantidade-btn {
-                width: 32px;
-                height: 32px;
-                border: none;
-                background: white;
-                color: var(--primary);
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s ease;
-                font-weight: 600;
-
-                &:hover:not(:disabled) {
-                  background: var(--primary);
-                  color: white;
-                  transform: scale(1.1);
-                }
-
-                &:disabled {
-                  opacity: 0.3;
-                  cursor: not-allowed;
-                }
-
-                i {
-                  font-size: 0.8rem;
-                }
-              }
-
-              .quantidade {
-                min-width: 32px;
-                text-align: center;
-                font-weight: 700;
-                color: var(--text);
-              }
-            }
-
-            .add-btn {
-              flex: 1;
-              padding: 0.75rem 1.5rem;
-              background: var(--primary);
-              color: white;
-              border: none;
-              border-radius: 50px;
-              font-weight: 700;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 0.5rem;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              font-size: 0.9rem;
-
-              &:hover:not(:disabled) {
-                background: var(--secondary);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(139, 0, 20, 0.3);
-              }
-
-              &:disabled {
-                background: #ccc;
-                cursor: not-allowed;
-                transform: none;
-              }
-
-              i {
-                font-size: 1rem;
-              }
-            }
-          }
-        }
-      }
-    }
+    // ProductCard component agora cuida de toda a estilização dos cards
   }
 
   // Botão flutuante do carrinho

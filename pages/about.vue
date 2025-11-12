@@ -78,7 +78,7 @@
 
           <div class="diferencial-card" data-aos="zoom-in" data-aos-delay="100">
             <div class="diferencial-icon">
-              <i class="fas fa-user-chef"></i>
+              <i class="fas fa-users"></i>
             </div>
             <h3>Equipe Especializada</h3>
             <p>Nossa equipe é formada por profissionais apaixonados e qualificados, dedicados à arte da confeitaria.</p>

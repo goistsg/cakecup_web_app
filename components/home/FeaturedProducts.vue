@@ -15,7 +15,16 @@
       <ProductCard 
         v-for="product in displayProducts" 
         :key="product.id" 
-        :product="product" 
+        :product="product"
+        variant="complete"
+        :is-favorite="isFavorite(product.id)"
+        :show-stock-badge="true"
+        :show-favorite-button="isAuthenticated"
+        :show-quantity-control="true"
+        :show-category="true"
+        :show-sku="true"
+        @toggle-favorite="toggleFavoriteProduct(product.id)"
+        @add-to-cart="handleAddToCart"
       />
     </div>
   </section>
@@ -25,11 +34,15 @@
 import { computed, onMounted } from 'vue'
 import { useStorePublic } from '~/composables/useStorePublic'
 import { useCompany } from '~/composables/useCompany'
+import { useWishlist } from '~/composables/useWishlist'
+import { useAuth } from '~/composables/useAuth'
 import ProductCard from '~/components/common/ProductCard.vue'
 
 // Store pública (sem autenticação necessária)
 const { featuredProducts, loading, error, fetchProducts } = useStorePublic()
 const { companyId } = useCompany()
+const { isFavorite, toggleFavorite, fetchFavorites } = useWishlist()
+const { isAuthenticated } = useAuth()
 
 // Produtos de fallback caso a API falhe
 const fallbackProducts = [
@@ -67,9 +80,30 @@ const displayProducts = computed(() => {
 const loadProducts = async () => {
   try {
     await fetchProducts()
+    if (isAuthenticated.value) {
+      await fetchFavorites()
+    }
   } catch (err) {
     console.error('Erro ao carregar produtos:', err)
   }
+}
+
+const toggleFavoriteProduct = async (productId: string) => {
+  if (!isAuthenticated.value) {
+    alert('Por favor, faça login para favoritar produtos')
+    return
+  }
+  
+  try {
+    await toggleFavorite(productId)
+  } catch (err: any) {
+    console.error('Erro ao favoritar produto:', err)
+    alert(err.message || 'Erro ao favoritar produto')
+  }
+}
+
+const handleAddToCart = (productId: string, quantity: number) => {
+  console.log('Produto adicionado ao carrinho:', { productId, quantity })
 }
 
 onMounted(() => {

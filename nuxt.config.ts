@@ -28,6 +28,19 @@ export default defineNuxtConfig({
           process.cwd() + '/node_modules',
         ]
       }
+    },
+    vue: {
+      script: {
+        defineModel: true,
+        propsDestructure: true
+      }
+    }
+  },
+
+  // Suprimir warnings específicos do Vue em desenvolvimento
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag) => false
     }
   },
 
