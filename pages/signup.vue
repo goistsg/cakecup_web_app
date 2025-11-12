@@ -1,13 +1,29 @@
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-card">
-        <!-- Etapa 1: Login -->
+  <div class="signup-page">
+    <div class="signup-container">
+      <div class="signup-card">
+        <!-- Etapa 1: Cadastro -->
         <div v-if="!otpSent">
-          <h1>Bem-vindo ao CakeCup</h1>
-          <p class="subtitle">Entre com seu WhatsApp para continuar</p>
+          <h1>Criar Conta</h1>
+          <p class="subtitle">Preencha seus dados para começar</p>
 
-          <form @submit.prevent="handleLogin">
+          <form @submit.prevent="handleSignup" autocomplete="off">
+            <div class="form-group">
+              <label for="name">
+                <i class="fas fa-user"></i>
+                Nome Completo
+              </label>
+              <input
+                id="name"
+                v-model="formData.name"
+                type="text"
+                placeholder="Digite seu nome completo"
+                required
+                :disabled="loading"
+                autocomplete="name"
+              >
+            </div>
+
             <div class="form-group">
               <label for="whatsapp">
                 <i class="fab fa-whatsapp"></i>
@@ -15,7 +31,7 @@
               </label>
               <input
                 id="whatsapp"
-                v-model="whatsapp"
+                v-model="formData.whatsapp"
                 type="tel"
                 placeholder="+55 11 99999-9999"
                 required
@@ -27,16 +43,21 @@
               </small>
             </div>
 
-            <button type="submit" class="btn-primary" :disabled="loading">
+            <button 
+              type="submit" 
+              class="btn-primary" 
+              :disabled="loading"
+              @click.prevent="handleSignup"
+            >
               <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-arrow-right'"></i>
               {{ loading ? 'Enviando...' : 'Continuar' }}
             </button>
           </form>
 
-          <!-- Link para Cadastro -->
-          <div class="signup-link">
-            <p>Não tem conta?</p>
-            <NuxtLink to="/signup" class="link">Cadastre-se</NuxtLink>
+          <!-- Link para Login (apenas na etapa 1) -->
+          <div class="login-link">
+            <p>Já tem uma conta?</p>
+            <NuxtLink to="/login" class="link">Fazer Login</NuxtLink>
           </div>
         </div>
 
@@ -47,7 +68,7 @@
             <h1>Verificar WhatsApp</h1>
             <p class="subtitle">
               Enviamos um código para<br>
-              <strong>{{ whatsapp }}</strong>
+              <strong>{{ formData.whatsapp }}</strong>
             </p>
           </div>
 
@@ -74,7 +95,7 @@
 
             <button type="submit" class="btn-primary" :disabled="loading">
               <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
-              {{ loading ? 'Verificando...' : 'Confirmar' }}
+              {{ loading ? 'Verificando...' : 'Confirmar Cadastro' }}
             </button>
 
             <button 
@@ -112,17 +133,125 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAuth } from '~/composables/useAuth'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/auth'
 
 const router = useRouter()
-const route = useRoute()
-const { login, verifyOtp, error, loading } = useAuth()
+const { api } = useApi()
+const authStore = useAuthStore()
 
-const whatsapp = ref('')
+const formData = ref({
+  name: '',
+  whatsapp: '',
+})
+
 const otp = ref('')
 const otpSent = ref(false)
+const loading = ref(false)
+const error = ref('')
 const resendCooldown = ref(0)
+
+// Enviar código OTP
+const handleSignup = async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    console.log('🚀 Iniciando cadastro para:', formData.value.whatsapp)
+    
+    // Validar campos obrigatórios
+    if (!formData.value.name || !formData.value.whatsapp) {
+      throw new Error('Por favor, preencha todos os campos')
+    }
+
+    // 1. Criar usuário consumidor ANTES de enviar OTP
+    const config = useRuntimeConfig()
+    const companyId = config.public.companyId as string
+
+    if (!companyId) {
+      throw new Error('Company ID não configurado')
+    }
+
+    try {
+      console.log('📝 Criando usuário consumidor...')
+      await api.createUserConsumer({
+        name: formData.value.name,
+        whatsapp: formData.value.whatsapp,
+        companyId: companyId,
+      })
+      console.log('✅ Usuário criado com sucesso')
+    } catch (err: any) {
+      // Se usuário já existe, apenas continua o fluxo
+      console.log('ℹ️ Usuário já existe, continuando...')
+    }
+
+    // 2. Enviar OTP via WhatsApp
+    console.log('📱 Enviando OTP via WhatsApp...')
+    const response = await api.login(formData.value.whatsapp)
+    console.log('✅ OTP enviado com sucesso:', response)
+    
+    otpSent.value = true
+    
+    // Iniciar cooldown de reenvio
+    startResendCooldown()
+  } catch (err: any) {
+    console.error('❌ Erro no cadastro:', err)
+    error.value = err.message || 'Erro ao enviar código de verificação'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Verificar OTP e fazer login
+const handleVerifyOtp = async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    console.log('🔑 Verificando código OTP...')
+    
+    // Usar o authStore para verificar OTP e autenticar o usuário
+    await authStore.verifyOtp(formData.value.whatsapp, otp.value)
+    
+    console.log('✅ OTP verificado e usuário autenticado com sucesso')
+
+    // Redirecionar
+    const route = useRoute()
+    const redirect = route.query.redirect as string || '/'
+    console.log('🚀 Redirecionando para:', redirect)
+    await router.push(redirect)
+  } catch (err: any) {
+    console.error('❌ Erro na verificação OTP:', err)
+    error.value = err.message || 'Código inválido ou expirado'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Reenviar OTP
+const resendOtp = async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    await api.login(formData.value.whatsapp)
+    startResendCooldown()
+    
+    // Feedback visual
+    const tempError = error.value
+    error.value = ''
+    setTimeout(() => {
+      if (!tempError) {
+        // Poderia adicionar uma mensagem de sucesso aqui
+      }
+    }, 100)
+  } catch (err: any) {
+    error.value = err.message || 'Erro ao reenviar código'
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
+}
 
 // Cooldown de 60 segundos para reenvio
 const startResendCooldown = () => {
@@ -135,157 +264,115 @@ const startResendCooldown = () => {
   }, 1000)
 }
 
-const handleLogin = async () => {
-  try {
-    await login(whatsapp.value)
-    otpSent.value = true
-    startResendCooldown()
-  } catch (err) {
-    console.error('Erro ao enviar OTP:', err)
-  }
-}
-
-const handleVerifyOtp = async () => {
-  try {
-    await verifyOtp(whatsapp.value, otp.value)
-    
-    // Verificar se há redirect na query
-    const redirect = route.query.redirect as string || '/'
-    
-    router.push(redirect)
-  } catch (err) {
-    console.error('Erro ao verificar OTP:', err)
-  }
-}
-
-const resendOtp = async () => {
-  try {
-    await login(whatsapp.value)
-    startResendCooldown()
-  } catch (err) {
-    console.error('Erro ao reenviar OTP:', err)
-  }
-}
-
+// Voltar para o formulário de cadastro
 const resetForm = () => {
   otpSent.value = false
   otp.value = ''
-  resendCooldown.value = 0
+  error.value = ''
 }
 </script>
 
 <style lang="scss" scoped>
-.login-page {
+.signup-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #FBE9E7 0%, #E9DFD7 100%);
+  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
 }
 
-.login-container {
+.signup-container {
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
 }
 
-.login-card {
+.signup-card {
   background: white;
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 3rem;
-  box-shadow: 0 20px 60px rgba(139, 0, 20, 0.15);
-  animation: fadeInUp 0.6s ease-out;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 
   h1 {
     text-align: center;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     color: var(--primary);
     font-size: 2rem;
-    font-weight: 700;
   }
 
   .subtitle {
     text-align: center;
     color: #666;
-    margin-bottom: 2.5rem;
-    font-size: 1.05rem;
+    margin-bottom: 2rem;
     line-height: 1.6;
 
     strong {
       color: var(--primary);
-      font-weight: 600;
+      font-weight: 700;
     }
   }
 }
 
-// OTP Header (igual ao signup)
+// Header OTP
 .otp-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 
-  i {
-    font-size: 4rem;
+  > i {
+    font-size: 3rem;
     color: var(--primary);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     display: block;
-    animation: pulse 2s infinite;
   }
 
   h1 {
-    font-size: 1.75rem;
     margin-bottom: 0.75rem;
-  }
-
-  .subtitle {
-    margin-bottom: 0;
   }
 }
 
+// Form Groups
 .form-group {
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 
   label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
-    color: var(--text);
+    color: #333;
     font-weight: 600;
     font-size: 0.95rem;
 
     i {
       color: var(--primary);
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
   }
 
   input {
     width: 100%;
-    padding: 1rem 1.25rem;
+    padding: 1rem;
     border: 2px solid #e0e0e0;
     border-radius: 12px;
     font-size: 1rem;
     transition: all 0.3s;
-    background: #fafafa;
 
     &:focus {
       outline: none;
       border-color: var(--primary);
-      background: white;
       box-shadow: 0 0 0 3px rgba(139, 0, 20, 0.1);
     }
 
     &:disabled {
       background-color: #f5f5f5;
       cursor: not-allowed;
-      opacity: 0.7;
     }
 
     &.otp-input {
       text-align: center;
       font-size: 1.5rem;
-      font-weight: 600;
       letter-spacing: 0.5rem;
+      font-weight: 700;
     }
   }
 
@@ -293,44 +380,50 @@ const resetForm = () => {
     display: block;
     margin-top: 0.5rem;
     color: #999;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
   }
 }
 
+// Buttons
 .btn-primary,
 .btn-secondary {
   width: 100%;
-  padding: 1.125rem;
+  padding: 1rem;
   border: none;
   border-radius: 12px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 
   i {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
-    transform: none !important;
   }
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
   margin-bottom: 1rem;
+  box-shadow: 0 4px 16px rgba(139, 0, 20, 0.25);
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(139, 0, 20, 0.3);
+    box-shadow: 0 6px 24px rgba(139, 0, 20, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 }
 
@@ -343,7 +436,27 @@ const resetForm = () => {
   }
 }
 
-// Resend Section (igual ao signup)
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.3s;
+
+  &:hover:not(:disabled) {
+    color: var(--secondary);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Resend Section
 .resend-section {
   text-align: center;
   margin-top: 2rem;
@@ -355,29 +468,9 @@ const resetForm = () => {
     margin-bottom: 0.75rem;
     font-size: 0.95rem;
   }
-
-  .btn-link {
-    background: none;
-    border: none;
-    color: var(--primary);
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: underline;
-    transition: color 0.3s;
-    font-size: 1rem;
-
-    &:hover:not(:disabled) {
-      color: var(--secondary);
-    }
-
-    &:disabled {
-      color: #999;
-      cursor: not-allowed;
-      text-decoration: none;
-    }
-  }
 }
 
+// Error Message
 .error-message {
   display: flex;
   align-items: center;
@@ -397,7 +490,8 @@ const resetForm = () => {
   }
 }
 
-.signup-link {
+// Login Link
+.login-link {
   text-align: center;
   margin-top: 2rem;
   padding-top: 2rem;
@@ -421,43 +515,23 @@ const resetForm = () => {
   }
 }
 
-// Animations
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-// Responsive
+// Responsividade
 @media (max-width: 768px) {
-  .login-page {
+  .signup-page {
     padding: 1rem;
   }
 
-  .login-card {
+  .signup-card {
     padding: 2rem 1.5rem;
+    border-radius: 16px;
+
+    h1 {
+      font-size: 1.75rem;
+    }
   }
 
-  h1 {
-    font-size: 1.5rem !important;
-  }
-
-  .otp-header i {
-    font-size: 3rem;
+  .otp-header > i {
+    font-size: 2.5rem;
   }
 }
 </style>

@@ -1,130 +1,111 @@
 <template>
   <div class="checkout-page">
-    <div class="checkout-container">
-      <h1>Finalizar Pedido</h1>
+    <!-- Carrinho Vazio -->
+    <div v-if="!loading && items.length === 0" class="empty-cart-page">
+      <i class="fas fa-shopping-cart"></i>
+      <h2>Seu carrinho está vazio</h2>
+      <p>Adicione produtos ao carrinho para continuar com o pedido</p>
+      <NuxtLink to="/products" class="btn-shop">
+        <i class="fas fa-arrow-left"></i>
+        Ver Produtos
+      </NuxtLink>
+    </div>
 
-      <!-- Resumo do Carrinho -->
-      <section class="cart-summary">
-        <h2>Seu Pedido</h2>
-        <div v-if="loading" class="loading">Carregando...</div>
-        
-        <div v-else-if="items.length === 0" class="empty-cart">
-          <p>Seu carrinho está vazio</p>
-          <NuxtLink to="/products" class="btn-primary">Ver Produtos</NuxtLink>
+    <!-- Checkout Completo -->
+    <div v-else class="checkout-container">
+      <!-- Header -->
+      <div class="checkout-header">
+        <h1>
+          <i class="fas fa-shopping-bag"></i>
+          Finalizar Pedido
+        </h1>
+        <p class="subtitle">Complete as informações abaixo para finalizar sua compra</p>
+      </div>
+
+      <div class="checkout-grid">
+        <!-- Coluna Principal -->
+        <div class="checkout-main">
+          <!-- 1. Endereço de Entrega -->
+          <AddressSelector 
+            :addresses="addresses"
+            :selected-address-id="selectedAddressId"
+            :user-id="user?.id || ''"
+            @update:selected-address-id="selectedAddressId = $event"
+            @address-saved="onAddressSaved"
+          />
+
+          <!-- 2. Método de Entrega e Frete -->
+          <FreightCalculator
+            :address-selected="!!selectedAddressId"
+            :cep="selectedAddress?.zipCode"
+            :subtotal="subtotal"
+            @update:method="deliveryMethod = $event"
+            @update:fee="deliveryFee = $event"
+            @update:estimated-days="estimatedDays = $event"
+          />
+
+          <!-- 3. Forma de Pagamento -->
+          <PaymentSelector
+            @update:method="selectedPaymentMethod = $event"
+          />
+
+          <!-- 4. Observações -->
+          <div class="notes-section">
+            <h2>
+              <i class="fas fa-comment-dots"></i>
+              Observações
+            </h2>
+            <textarea 
+              v-model="orderNotes"
+              placeholder="Alguma observação especial sobre seu pedido? (opcional)"
+              rows="4"
+            ></textarea>
+          </div>
         </div>
 
-        <div v-else class="cart-items">
-          <div v-for="item in items" :key="item.id" class="cart-item">
-            <img :src="getProductImage(item.product)" :alt="item.product.name">
-            <div class="item-info">
-              <h3>{{ item.product.name }}</h3>
-              <p>Quantidade: {{ item.quantity }}</p>
-              <p class="price">R$ {{ item.subtotal.toFixed(2) }}</p>
+        <!-- Coluna Lateral - Resumo -->
+        <div class="checkout-sidebar">
+          <OrderSummary 
+            :items="items"
+            :delivery-fee="deliveryFee"
+            :delivery-method="deliveryMethod"
+          />
+
+          <!-- Botão de Finalizar -->
+          <button 
+            class="btn-checkout"
+            :disabled="!canCheckout || processingOrder"
+            @click="finalizeOrder"
+          >
+            <i class="fas" :class="processingOrder ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
+            {{ processingOrder ? 'Processando Pedido...' : 'Confirmar Pedido' }}
+          </button>
+
+          <!-- Garantias -->
+          <div class="checkout-guarantees">
+            <div class="guarantee-item">
+              <i class="fas fa-lock"></i>
+              <span>Pagamento Seguro</span>
+            </div>
+            <div class="guarantee-item">
+              <i class="fas fa-shield-alt"></i>
+              <span>Dados Protegidos</span>
+            </div>
+            <div class="guarantee-item">
+              <i class="fas fa-truck"></i>
+              <span>Entrega Garantida</span>
             </div>
           </div>
-
-          <div class="cart-total">
-            <h3>Total: {{ formattedTotal }}</h3>
-          </div>
         </div>
-      </section>
-
-      <!-- Endereço de Entrega -->
-      <section v-if="items.length > 0" class="delivery-section">
-        <h2>Endereço de Entrega</h2>
-        
-        <div v-if="addresses.length === 0" class="no-address">
-          <p>Você ainda não tem endereços cadastrados</p>
-          <button @click="showAddressForm = true" class="btn-secondary">
-            Adicionar Endereço
-          </button>
-        </div>
-
-        <div v-else class="addresses-list">
-          <div 
-            v-for="address in addresses" 
-            :key="address.id"
-            class="address-card"
-            :class="{ selected: selectedAddressId === address.id }"
-            @click="selectedAddressId = address.id"
-          >
-            <h4>{{ address.name || 'Endereço' }}</h4>
-            <p>{{ address.street }}, {{ address.number }}</p>
-            <p>{{ address.district }} - {{ address.city }}/{{ address.state }}</p>
-            <p>CEP: {{ address.zipCode }}</p>
-          </div>
-          <button @click="showAddressForm = true" class="btn-add-address">
-            + Novo Endereço
-          </button>
-        </div>
-      </section>
-
-      <!-- Método de Pagamento -->
-      <section v-if="items.length > 0" class="payment-section">
-        <h2>Método de Pagamento</h2>
-        
-        <div class="payment-methods">
-          <div 
-            v-for="method in paymentMethods" 
-            :key="method.value"
-            class="payment-method"
-            :class="{ selected: selectedPaymentMethod === method.value }"
-            @click="selectedPaymentMethod = method.value"
-          >
-            <span class="method-icon">{{ method.icon }}</span>
-            <span class="method-name">{{ method.name }}</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Observações -->
-      <section v-if="items.length > 0" class="notes-section">
-        <h2>Observações</h2>
-        <textarea 
-          v-model="orderNotes"
-          placeholder="Alguma observação especial? (opcional)"
-          rows="4"
-        ></textarea>
-      </section>
-
-      <!-- Botão de Finalizar -->
-      <div v-if="items.length > 0" class="checkout-actions">
-        <button 
-          class="btn-checkout"
-          :disabled="!canCheckout || processingOrder"
-          @click="finalizeOrder"
-        >
-          {{ processingOrder ? 'Processando...' : 'Finalizar Pedido' }}
-        </button>
       </div>
 
       <!-- Mensagem de Erro -->
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
-    </div>
-
-    <!-- Modal de Formulário de Endereço -->
-    <div v-if="showAddressForm" class="modal-overlay" @click="showAddressForm = false">
-      <div class="modal-content" @click.stop>
-        <h3>Novo Endereço</h3>
-        <form @submit.prevent="saveAddress">
-          <input v-model="newAddress.name" placeholder="Nome (ex: Casa, Trabalho)" />
-          <input v-model="newAddress.zipCode" placeholder="CEP" required />
-          <input v-model="newAddress.street" placeholder="Rua" required />
-          <input v-model="newAddress.number" placeholder="Número" />
-          <input v-model="newAddress.complement" placeholder="Complemento" />
-          <input v-model="newAddress.district" placeholder="Bairro" />
-          <input v-model="newAddress.city" placeholder="Cidade" required />
-          <input v-model="newAddress.state" placeholder="Estado (UF)" maxlength="2" required />
-          
-          <div class="modal-actions">
-            <button type="submit" class="btn-primary">Salvar</button>
-            <button type="button" class="btn-secondary" @click="showAddressForm = false">
-              Cancelar
-            </button>
-          </div>
-        </form>
+      <div v-if="error" class="error-toast">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button @click="error = ''" class="btn-close-error">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -135,138 +116,134 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCart } from '~/composables/useCart'
 import { useAuth } from '~/composables/useAuth'
+import { useApi } from '~/composables/useApi'
+import { useCartStore } from '~/stores/cart'
 import { useClientsStore } from '~/stores/clients'
 import { useOrdersStore } from '~/stores/orders'
-import type { Product } from '~/types/api'
+import type { PaymentMethod } from '~/types/api'
+import AddressSelector from '~/components/checkout/AddressSelector.vue'
+import FreightCalculator from '~/components/checkout/FreightCalculator.vue'
+import PaymentSelector from '~/components/checkout/PaymentSelector.vue'
+import OrderSummary from '~/components/checkout/OrderSummary.vue'
 
 const router = useRouter()
-const { items, formattedTotal, loading, clearCart } = useCart()
+const { items, loading, clearCart } = useCart()
 const { user, isAuthenticated } = useAuth()
 const clientsStore = useClientsStore()
 const ordersStore = useOrdersStore()
 
+// Estados
 const selectedAddressId = ref<string | null>(null)
-const selectedPaymentMethod = ref('PIX')
+const selectedPaymentMethod = ref<PaymentMethod | null>(null)
+const deliveryMethod = ref<string | null>(null)
+const deliveryFee = ref<number | null>(null)
+const estimatedDays = ref<number | null>(null)
 const orderNotes = ref('')
-const showAddressForm = ref(false)
 const processingOrder = ref(false)
-const error = ref<string | null>(null)
+const error = ref<string>('')
 
+// Computed
 const addresses = computed(() => clientsStore.addresses)
 
-const newAddress = ref({
-  name: '',
-  street: '',
-  number: '',
-  complement: '',
-  district: '',
-  city: '',
-  state: '',
-  zipCode: '',
+const selectedAddress = computed(() => {
+  return addresses.value.find(a => a.id === selectedAddressId.value)
 })
 
-const paymentMethods = [
-  { value: 'PIX', name: 'PIX', icon: '💳' },
-  { value: 'CREDIT_CARD', name: 'Cartão de Crédito', icon: '💳' },
-  { value: 'DEBIT_CARD', name: 'Cartão de Débito', icon: '💳' },
-  { value: 'CASH', name: 'Dinheiro', icon: '💵' },
-  { value: 'BILL', name: 'Boleto', icon: '📄' },
-]
+const subtotal = computed(() => {
+  return items.value.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+})
 
 const canCheckout = computed(() => {
   return items.value.length > 0 && 
          selectedAddressId.value && 
+         deliveryMethod.value &&
          selectedPaymentMethod.value
 })
 
-const getProductImage = (product: Product) => {
-  if (product.images && product.images.length > 0) {
-    const primaryImage = product.images.find(img => img.isPrimary)
-    return primaryImage?.url || product.images[0].url
-  }
-  return '/products/photo_default.png'
-}
-
-const saveAddress = async () => {
-  try {
-    if (!user.value?.id) return
-    
+// Métodos
+async function onAddressSaved() {
+  if (user.value?.id) {
     const clientsStore = useClientsStore() as any
-    await clientsStore.createAddress({
-      ...newAddress.value,
-      clientId: user.value.id,
-    })
-    
-    showAddressForm.value = false
-    newAddress.value = {
-      name: '',
-      street: '',
-      number: '',
-      complement: '',
-      district: '',
-      city: '',
-      state: '',
-      zipCode: '',
-    }
-  } catch (err: any) {
-    error.value = 'Erro ao salvar endereço'
-    console.error(err)
+    await clientsStore.fetchAddresses(user.value.id)
   }
 }
 
-const finalizeOrder = async () => {
-  if (!canCheckout.value || !user.value?.id) return
+async function finalizeOrder() {
+  if (!canCheckout.value || !user.value?.id) {
+    error.value = 'Por favor, preencha todos os dados obrigatórios'
+    return
+  }
   
   processingOrder.value = true
-  error.value = null
+  error.value = ''
 
   try {
-    const config = useRuntimeConfig()
-    const companyId = config.public.companyId as string
+    // Obter cartId do store
+    const cartStore = useCartStore()
+    const cartId = cartStore.cart?.id
     
-    if (!companyId) {
-      error.value = 'COMPANY_ID não configurado. Configure a variável de ambiente NUXT_PUBLIC_COMPANY_ID'
+    if (!cartId) {
+      error.value = 'Carrinho não encontrado. Por favor, recarregue a página.'
       return
     }
     
-    const orderData = {
-      clientId: user.value.id,
-      companyId: companyId,
-      items: items.value.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      deliveryAddressId: selectedAddressId.value!,
-      paymentMethod: selectedPaymentMethod.value as any,
-      notes: orderNotes.value || undefined,
+    // Criar o pedido usando a rota /orders/checkout/
+    const checkoutData = {
+      cartId: cartId,
+      addressId: selectedAddressId.value!,
+      paymentMethod: selectedPaymentMethod.value!,
     }
 
-    await ordersStore.createOrder(orderData)
+    console.log('🚀 Finalizando pedido com:', checkoutData)
+    
+    const { api } = useApi()
+    const order = await api.request<any>('/orders/checkout/', {
+      method: 'POST',
+      body: checkoutData,
+    })
+    
+    console.log('✅ Pedido criado com sucesso:', order)
+    
+    // Limpar carrinho local
     await clearCart()
     
-    router.push('/orders')
+    // Redirecionar para confirmação
+    router.push(`/order-confirmation/${order.id}`)
   } catch (err: any) {
-    error.value = err.message || 'Erro ao finalizar pedido'
-    console.error(err)
+    error.value = err.message || 'Erro ao finalizar pedido. Tente novamente.'
+    console.error('❌ Erro ao finalizar pedido:', err)
+    
+    // Scroll para o erro
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   } finally {
     processingOrder.value = false
   }
 }
 
+// Lifecycle
 onMounted(async () => {
+  // Verificar autenticação
   if (!isAuthenticated.value) {
-    router.push('/login')
+    router.push('/login?redirect=/checkout')
     return
   }
 
+  // Carregar endereços
   if (user.value?.id) {
-    const clientsStore = useClientsStore() as any
-    await clientsStore.fetchAddresses(user.value.id)
-    
-    // Selecionar endereço principal automaticamente
-    const primaryAddress = addresses.value.find(a => a.isPrimary)
-    if (primaryAddress) {
-      selectedAddressId.value = primaryAddress.id
+    try {
+      const clientsStore = useClientsStore() as any
+      await clientsStore.fetchAddresses(user.value.id)
+      
+      // Auto-selecionar endereço principal
+      const primaryAddress = addresses.value.find(a => a.isPrimary)
+      if (primaryAddress) {
+        selectedAddressId.value = primaryAddress.id
+      } else if (addresses.value.length > 0) {
+        // Se não tem principal, selecionar o primeiro
+        selectedAddressId.value = addresses.value[0].id
+      }
+    } catch (err) {
+      console.error('Erro ao carregar endereços:', err)
     }
   }
 })
@@ -275,296 +252,365 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .checkout-page {
   min-height: 100vh;
-  background-color: #f9f9f9;
-  padding: 2rem;
+  background: linear-gradient(180deg, #f9f9f9 0%, #ffffff 100%);
+  padding: 2rem 1rem;
 }
 
-.checkout-container {
-  max-width: 800px;
-  margin: 0 auto;
-  
-  h1 {
-    text-align: center;
+// Carrinho Vazio
+.empty-cart-page {
+  max-width: 600px;
+  margin: 4rem auto;
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+
+  i {
+    font-size: 5rem;
+    color: #ddd;
     margin-bottom: 2rem;
+  }
+
+  h2 {
+    font-size: 2rem;
     color: #333;
-  }
-
-  section {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-
-    h2 {
-      margin-bottom: 1.5rem;
-      color: var(--primary);
-      border-bottom: 2px solid var(--primary);
-      padding-bottom: 0.5rem;
-    }
-  }
-}
-
-.cart-items {
-  .cart-item {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-
-    .item-info {
-      flex: 1;
-
-      h3 {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-      }
-
-      .price {
-        color: var(--primary);
-        font-weight: bold;
-        margin-top: 0.5rem;
-      }
-    }
-  }
-}
-
-.cart-total {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid #eee;
-  text-align: right;
-
-  h3 {
-    color: var(--primary);
-    font-size: 1.5rem;
-  }
-}
-
-.addresses-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.address-card {
-  padding: 1rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    border-color: var(--primary);
-  }
-
-  &.selected {
-    border-color: var(--primary);
-    background-color: #fff5f8;
-  }
-
-  h4 {
-    margin-bottom: 0.5rem;
-    color: #333;
+    margin-bottom: 1rem;
   }
 
   p {
+    font-size: 1.1rem;
     color: #666;
-    margin: 0.25rem 0;
+    margin-bottom: 2rem;
+  }
+
+  .btn-shop {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 0, 20, 0.3);
+    }
   }
 }
 
-.payment-methods {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+// Checkout Container
+.checkout-container {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.payment-method {
+.checkout-header {
+  text-align: center;
+  margin-bottom: 3rem;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+
+    i {
+      font-size: 2rem;
+    }
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: #666;
+  }
+}
+
+// Grid Layout
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.checkout-main {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
+  gap: 2rem;
+}
 
-  &:hover {
-    border-color: var(--primary);
-  }
-
-  &.selected {
-    border-color: var(--primary);
-    background-color: #fff5f8;
-  }
-
-  .method-icon {
-    font-size: 2rem;
-  }
-
-  .method-name {
-    font-weight: 600;
+.checkout-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; // Aumentar gap para melhor separação visual
+  position: sticky;
+  top: 2rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  
+  // Garantir que elementos não se sobreponham
+  > * {
+    position: relative;
+    z-index: 1;
   }
 }
 
-textarea {
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-family: inherit;
-  resize: vertical;
+// Observações
+.notes-section {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    color: var(--primary);
+    font-size: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+
+    i {
+      font-size: 1.3rem;
+    }
+  }
+
+  textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.3s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    &::placeholder {
+      color: #999;
+    }
   }
 }
 
-.checkout-actions {
-  text-align: center;
-}
-
+// Botão de Finalizar
 .btn-checkout {
-  padding: 1rem 3rem;
+  width: 100%;
+  padding: 1.25rem;
+  margin-top: 0.5rem; // Espaçamento extra do resumo
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
   border: none;
-  border-radius: 30px;
+  border-radius: 16px;
   font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 16px rgba(139, 0, 20, 0.25);
+  min-height: 64px; // Garante altura mínima consistente
+  flex-shrink: 0; // Não encolhe no flex container
+
+  i {
+    font-size: 1.3rem;
+  }
 
   &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(139, 0, 20, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(-1px);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none !important; // Força a manter posição
+    background: linear-gradient(135deg, #999 0%, #777 100%);
   }
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-add-address {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
+// Garantias
+.checkout-guarantees {
+  display: flex;
+  justify-content: space-around;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 
-.btn-primary {
-  background-color: var(--primary);
-  color: white;
+  .guarantee-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
 
-  &:hover {
-    background-color: var(--secondary);
+    i {
+      font-size: 1.5rem;
+      color: #27ae60;
+    }
+
+    span {
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: 500;
+    }
   }
 }
 
-.btn-secondary {
-  background-color: #eee;
-  color: #666;
-
-  &:hover {
-    background-color: #ddd;
-  }
-}
-
-.btn-add-address {
-  width: 100%;
-  background-color: #f9f9f9;
-  color: var(--primary);
-  border: 2px dashed var(--primary);
-
-  &:hover {
-    background-color: #fff5f8;
-  }
-}
-
-.modal-overlay {
+// Toast de Erro
+.error-toast {
   position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  border: 2px solid #f44336;
   border-radius: 12px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 90%;
+  box-shadow: 0 8px 32px rgba(244, 67, 54, 0.3);
+  z-index: 3000;
+  max-width: 90%;
+  animation: slideDown 0.3s ease-out;
 
-  h3 {
-    margin-bottom: 1.5rem;
-    color: var(--primary);
+  i {
+    font-size: 1.5rem;
+    color: #f44336;
+    flex-shrink: 0;
   }
 
-  form {
+  span {
+    color: #333;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .btn-close-error {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #ffebee;
+    color: #f44336;
+    cursor: pointer;
     display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: #f44336;
+      color: white;
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+// Responsividade
+@media (max-width: 1200px) {
+  .checkout-grid {
+    grid-template-columns: 1fr 350px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-sidebar {
+    order: -1;
+    position: static; // Remove sticky no mobile
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .checkout-page {
+    padding: 1rem 0.5rem;
+  }
+
+  .checkout-header {
+    margin-bottom: 2rem;
+
+    h1 {
+      font-size: 1.8rem;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+    }
+  }
+
+  .checkout-grid {
+    gap: 1.5rem;
+  }
+
+  .checkout-main {
+    gap: 1.5rem;
+  }
+
+  .notes-section,
+  .checkout-sidebar > * {
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .checkout-guarantees {
     flex-direction: column;
     gap: 1rem;
 
-    input {
-      padding: 0.75rem;
-      border: 2px solid #eee;
-      border-radius: 8px;
-
-      &:focus {
-        outline: none;
-        border-color: var(--primary);
-      }
+    .guarantee-item {
+      flex-direction: row;
+      justify-content: center;
     }
   }
 
-  .modal-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-
-    button {
-      flex: 1;
-    }
+  .error-toast {
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    max-width: none;
   }
-}
-
-.error-message {
-  padding: 1rem;
-  background-color: #fee;
-  border: 1px solid #fcc;
-  border-radius: 8px;
-  color: #c33;
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.loading,
-.empty-cart,
-.no-address {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
 }
 </style>
-

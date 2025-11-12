@@ -107,6 +107,16 @@
             <i class="fas fa-times-circle"></i>
             Esgotado
           </div>
+          
+          <!-- Botão de Favoritar -->
+          <button 
+            class="favorite-btn" 
+            :class="{ 'is-favorite': isFavorite(product.id) }"
+            @click="toggleFavoriteProduct(product.id)"
+            :disabled="togglingFavorite === product.id"
+          >
+            <i class="fas" :class="togglingFavorite === product.id ? 'fa-spinner fa-spin' : (isFavorite(product.id) ? 'fa-heart' : 'fa-heart')"></i>
+          </button>
         </div>
 
         <div class="produto-info">
@@ -135,7 +145,7 @@
                 </button>
                 <span class="quantidade">{{ getQuantidade(product.id) }}</span>
                 <button 
-                  @click="aumentarQuantidade(product.id)" 
+                  @click="aumentarQuantidade(product.id, product.stock)" 
                   class="quantidade-btn"
                   :disabled="product.stock === 0 || getQuantidade(product.id) >= product.stock"
                 >
@@ -183,6 +193,7 @@ import { useCart } from '~/composables/useCart'
 import { useStorePublic } from '~/composables/useStorePublic'
 import { useAuth } from '~/composables/useAuth'
 import { useCompany } from '~/composables/useCompany'
+import { useWishlist } from '~/composables/useWishlist'
 import type { Product } from '~/types/api'
 
 // Carrinho (pode funcionar sem autenticação)
@@ -208,6 +219,10 @@ const {
 
 // Autenticação (opcional)
 const { user } = useAuth()
+
+// Wishlist/Favoritos
+const { isFavorite, toggleFavorite, fetchFavorites } = useWishlist()
+const togglingFavorite = ref<string | null>(null)
 
 // Company ID
 const { companyId } = useCompany()
@@ -238,6 +253,15 @@ onMounted(async () => {
       fetchProducts(),
       fetchCategories()
     ])
+
+    // Buscar favoritos se o usuário estiver autenticado
+    if (user.value?.id) {
+      try {
+        await fetchFavorites()
+      } catch (err) {
+        console.error('Erro ao carregar favoritos:', err)
+      }
+    }
   } catch (err) {
     console.error('Erro ao carregar dados:', err)
   }
@@ -249,8 +273,15 @@ const getQuantidade = (produtoId: string) => {
 }
 
 // Funções para controlar a quantidade
-const aumentarQuantidade = (produtoId: string) => {
+const aumentarQuantidade = (produtoId: string, stock: number = 999) => {
   const atual = getQuantidade(produtoId)
+  
+  // Validar estoque
+  if (atual >= stock) {
+    alert(`Estoque máximo atingido! Apenas ${stock} unidades disponíveis.`)
+    return
+  }
+  
   quantidades.value.set(produtoId, atual + 1)
 }
 
@@ -288,8 +319,42 @@ const getProductImage = (product: any) => {
   return '/products/photo_default.png'
 }
 
+const toggleFavoriteProduct = async (productId: string) => {
+  try {
+    // Verificar autenticação
+    if (!user.value?.id) {
+      alert('Por favor, faça login para adicionar aos favoritos')
+      await navigateTo('/login?redirect=/products')
+      return
+    }
+
+    togglingFavorite.value = productId
+    const added = await toggleFavorite(productId)
+    
+    // Feedback visual
+    if (added) {
+      // Produto adicionado aos favoritos
+      console.log('Produto adicionado aos favoritos')
+    } else {
+      // Produto removido dos favoritos
+      console.log('Produto removido dos favoritos')
+    }
+  } catch (err: any) {
+    console.error('Erro ao favoritar produto:', err)
+    if (err.statusCode === 401) {
+      alert('Sessão expirada. Por favor, faça login novamente.')
+      await navigateTo('/login?redirect=/products')
+    } else {
+      alert(err.message || 'Erro ao favoritar produto')
+    }
+  } finally {
+    togglingFavorite.value = null
+  }
+}
+
 const adicionarAoCarrinho = async (product: any) => {
   try {
+    // Verificar estoque
     if (product.stock === 0) {
       alert('Produto esgotado')
       return
@@ -302,20 +367,32 @@ const adicionarAoCarrinho = async (product: any) => {
       return
     }
     
-    if (user.value?.id) {
-      // Com autenticação: adiciona ao carrinho do servidor
-      await addItem(product.id, quantidade)
-    } else {
-      // Sem autenticação: adiciona ao carrinho local
-      console.log('Produto adicionado ao carrinho local:', product.name)
-      // TODO: Implementar carrinho local (localStorage)
+    // Verificar autenticação
+    if (!user.value?.id) {
+      // Redirecionar para login
+      alert('Por favor, faça login para adicionar produtos ao carrinho')
+      await navigateTo('/login?redirect=/products')
+      return
     }
     
+    // Adicionar ao carrinho no servidor
+    await addItem(product.id, quantidade)
+    
+    // Resetar quantidade
     quantidades.value.set(product.id, 1)
+    
+    // Abrir modal do carrinho
     openCart()
-  } catch (err) {
+  } catch (err: any) {
     console.error('Erro ao adicionar ao carrinho:', err)
-    alert('Erro ao adicionar produto ao carrinho')
+    
+    // Mensagens de erro específicas
+    if (err.statusCode === 401) {
+      alert('Sessão expirada. Por favor, faça login novamente.')
+      await navigateTo('/login?redirect=/products')
+    } else {
+      alert(err.message || 'Erro ao adicionar produto ao carrinho')
+    }
   }
 }
 
@@ -602,6 +679,59 @@ const truncateDescription = (text: string, maxLength: number = 80) => {
 
           i {
             font-size: 1rem;
+          }
+        }
+
+        .favorite-btn {
+          position: absolute;
+          bottom: 1rem;
+          right: 1rem;
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          background: white;
+          border: 2px solid #ddd;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          z-index: 10;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+          i {
+            font-size: 1.2rem;
+            color: #ccc;
+            transition: all 0.3s ease;
+          }
+
+          &:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+            i {
+              color: var(--primary);
+            }
+          }
+
+          &.is-favorite {
+            background: var(--primary);
+            border-color: var(--primary);
+
+            i {
+              color: white;
+              animation: heartbeat 0.6s ease-out;
+            }
+
+            &:hover:not(:disabled) {
+              background: var(--secondary);
+              border-color: var(--secondary);
+            }
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
           }
         }
       }

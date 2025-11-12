@@ -34,11 +34,14 @@ class ApiService {
     }
 
     // Adicionar company-id header se disponível
-    if (process.client) {
+    try {
       const config = useRuntimeConfig()
       if (config.public.companyId) {
         headers['company-id'] = config.public.companyId as string
       }
+    } catch (error) {
+      // Ignorar erro se useRuntimeConfig não estiver disponível
+      console.debug('Runtime config não disponível')
     }
 
     return headers
@@ -92,6 +95,13 @@ class ApiService {
     })
   }
 
+  async createUserConsumer(data: { name: string; whatsapp: string; companyId: string }) {
+    return this.request<any>('/users/consumer', {
+      method: 'POST',
+      body: data,
+    })
+  }
+
   // Products (Store - sem autenticação)
   async getProducts(companyId?: string, categoryId?: string) {
     const query: Record<string, any> = {}
@@ -133,34 +143,53 @@ class ApiService {
     return this.request<any>(`/categories/${id}`)
   }
 
-  // Cart
-  async getCart(clientId: string) {
-    return this.request<any>(`/cart/${clientId}`)
+  // Cart (usa autenticação via Bearer token)
+  async getCart() {
+    return this.request<any>('/cart')
   }
 
-  async addToCart(clientId: string, data: { productId: string; quantity: number; variant?: string }) {
-    return this.request<any>(`/cart/${clientId}/add`, {
+  async addToCart(data: { productId: string; quantity: number; variant?: string }) {
+    return this.request<any>('/cart/items', {
       method: 'POST',
       body: data,
     })
   }
 
-  async updateCartItem(clientId: string, itemId: string, quantity: number) {
-    return this.request<any>(`/cart/${clientId}/items/${itemId}`, {
-      method: 'PATCH',
+  async updateCartItem(itemId: string, quantity: number) {
+    return this.request<any>(`/cart/items/${itemId}`, {
+      method: 'PUT',
       body: { quantity },
     })
   }
 
-  async removeFromCart(clientId: string, itemId: string) {
-    return this.request<any>(`/cart/${clientId}/items/${itemId}`, {
+  async removeFromCart(itemId: string) {
+    return this.request<any>(`/cart/items/${itemId}`, {
       method: 'DELETE',
     })
   }
 
-  async clearCart(clientId: string) {
-    return this.request<any>(`/cart/${clientId}/clear`, {
+  async clearCart() {
+    return this.request<any>('/cart', {
       method: 'DELETE',
+    })
+  }
+
+  // Favorites
+  async getFavorites() {
+    return this.request<any[]>('/favorites')
+  }
+
+  async addFavorite(productId: string) {
+    return this.request<any>('/favorites', {
+      method: 'POST',
+      body: { productId },
+    })
+  }
+
+  async removeFavorite(productId: string) {
+    return this.request<any>(`/favorites`, {
+      method: 'DELETE',
+      body: { productId },
     })
   }
 
@@ -254,23 +283,6 @@ class ApiService {
     })
   }
 
-  // Favorites
-  async getFavorites(clientId: string) {
-    return this.request<any>(`/product-favorites/${clientId}`)
-  }
-
-  async addFavorite(clientId: string, productId: string) {
-    return this.request<any>(`/product-favorites/${clientId}`, {
-      method: 'POST',
-      body: { productId },
-    })
-  }
-
-  async removeFavorite(clientId: string, productId: string) {
-    return this.request<any>(`/product-favorites/${clientId}/${productId}`, {
-      method: 'DELETE',
-    })
-  }
 
   // Payments
   async getPayments(orderId?: string) {

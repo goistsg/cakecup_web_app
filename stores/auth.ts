@@ -102,6 +102,15 @@ export const useAuthStore = defineStore('auth', {
         if (process.client) {
           localStorage.removeItem('auth_token')
           localStorage.removeItem('user')
+          
+          // Limpar carrinho ao fazer logout
+          try {
+            const { useCartStore } = await import('./cart')
+            const cartStore = useCartStore()
+            cartStore.clearLocalCart()
+          } catch (error) {
+            console.error('Erro ao limpar carrinho:', error)
+          }
         }
       }
     },

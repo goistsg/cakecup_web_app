@@ -15,10 +15,8 @@ export function useCart() {
     isOpen: computed(() => cartStore.isOpen),
     loading: computed(() => cartStore.loading),
     error: computed(() => cartStore.error),
-    clientId: computed(() => cartStore.clientId),
 
     // Actions
-    setClientId: (clientId: string) => cartStore.setClientId(clientId),
     fetchCart: () => cartStore.fetchCart(),
     addItem: (productId: string, quantity?: number, variant?: string) => 
       cartStore.addItem(productId, quantity, variant),

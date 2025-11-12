@@ -13,7 +13,11 @@
           <img :src="getProductImage(item)" :alt="item.product?.name || 'Produto'">
           <div class="item-info">
             <h3>{{ item.product?.name || 'Produto' }}</h3>
-            <p>R$ {{ item.price.toFixed(2) }}</p>
+            <p class="price">R$ {{ item.price.toFixed(2) }}</p>
+            <p class="stock-info" v-if="item.product?.stock !== undefined">
+              <i class="fas fa-box"></i>
+              {{ item.product.stock }} em estoque
+            </p>
           </div>
           <div class="quantidade">
             <button @click="diminuirQuantidade(item.id)">-</button>
@@ -63,9 +67,9 @@ const cartStore = useCartStore()
 const { isAuthenticated } = useAuth()
 
 const getProductImage = (item: any) => {
-  if (item.product?.images && item.product.images.length > 0) {
-    const primaryImage = item.product.images.find((img: any) => img.isPrimary)
-    return primaryImage?.url || item.product.images[0].url
+  // O produto no carrinho usa imageUrls (array de strings)
+  if (item.product?.imageUrls && item.product.imageUrls.length > 0) {
+    return item.product.imageUrls[0]
   }
   return '/products/photo_default.png'
 }
@@ -73,14 +77,29 @@ const getProductImage = (item: any) => {
 const aumentarQuantidade = async (itemId: string) => {
   const item = cartStore.items.find((i: any) => i.id === itemId)
   if (item) {
-    await cartStore.updateQuantity(itemId, item.quantity + 1)
+    // Validar estoque antes de aumentar
+    const stock = item.product?.stock || 0
+    if (item.quantity >= stock) {
+      alert(`Estoque máximo atingido! Apenas ${stock} unidades disponíveis.`)
+      return
+    }
+    
+    try {
+      await cartStore.updateQuantity(itemId, item.quantity + 1)
+    } catch (error: any) {
+      alert(error.message || 'Erro ao atualizar quantidade')
+    }
   }
 }
 
 const diminuirQuantidade = async (itemId: string) => {
   const item = cartStore.items.find((i: any) => i.id === itemId)
   if (item && item.quantity > 1) {
-    await cartStore.updateQuantity(itemId, item.quantity - 1)
+    try {
+      await cartStore.updateQuantity(itemId, item.quantity - 1)
+    } catch (error: any) {
+      alert(error.message || 'Erro ao atualizar quantidade')
+    }
   }
 }
 
@@ -189,11 +208,24 @@ const irParaCheckout = () => {
             color: #333;
           }
 
-          p {
-            margin: 0;
+          p.price {
+            margin: 0 0 0.25rem 0;
             color: var(--primary);
             font-weight: 600;
             font-size: 1.1rem;
+          }
+
+          p.stock-info {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+
+            i {
+              font-size: 0.7rem;
+            }
           }
         }
 

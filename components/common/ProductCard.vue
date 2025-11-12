@@ -54,18 +54,25 @@ const truncatedDescription = computed(() => {
 
 const addToCart = async () => {
   try {
-    // Por enquanto, usar o ID do usuário como clientId
-    // Em produção, você deve ter o clientId armazenado de forma apropriada
-    if (user.value?.id) {
-      await addItem(props.product.id, 1)
-      toggleCart()
-    } else {
-      // Se não estiver logado, adicionar localmente (implementar lógica conforme necessário)
-      console.log('Usuário não autenticado - adicionar ao carrinho local')
-      toggleCart()
+    // Verificar se o usuário está autenticado
+    if (!user.value?.id) {
+      const router = useRouter()
+      router.push('/login?redirect=/products')
+      return
     }
-  } catch (error) {
+
+    // Validar estoque
+    const stock = props.product.stock || 0
+    if (stock <= 0) {
+      alert('Produto sem estoque!')
+      return
+    }
+
+    await addItem(props.product.id, 1)
+    toggleCart()
+  } catch (error: any) {
     console.error('Erro ao adicionar ao carrinho:', error)
+    alert(error.message || 'Erro ao adicionar ao carrinho')
   }
 }
 </script>

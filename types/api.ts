@@ -46,6 +46,7 @@ export interface UpdateUserDto {
 export interface CreateUserConsumerDto {
   name: string
   whatsapp: string
+  companyId: string
   email?: string
   cpf?: string
 }
@@ -188,9 +189,20 @@ export interface UpdateCategoryDto {
 // ==================== Cart ====================
 export interface Cart {
   id: string
-  clientId: string
+  userId: string
+  sessionId?: string | null
+  companyId: string
+  cep?: string | null
+  deliveryMethod?: string | null
+  deliveryFee?: number | null
+  estimatedDays?: number | null
+  couponCode?: string | null
+  discountValue?: number | null
+  totalAmount?: number | null
+  expiresAt?: string | null
   items: CartItem[]
-  total: number
+  user?: User
+  company?: Company
   createdAt?: string
   updatedAt?: string
 }
@@ -199,11 +211,48 @@ export interface CartItem {
   id: string
   cartId: string
   productId: string
-  product: Product
+  product: CartProduct
   quantity: number
   variant?: string
   price: number
-  subtotal: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Produto retornado dentro do carrinho
+export interface CartProduct {
+  id: string
+  name: string
+  category: string
+  sku: string
+  description: string
+  imageUrls: string[]
+  recommendations: string[]
+  usageNotes?: string | null
+  costPrice: number
+  lastPrice: number
+  salePrice: number
+  stock: number
+  hasSample: boolean
+  sampleQuantity?: number | null
+  createdAt: string
+  updatedAt: string
+  companyId: string
+  userId: string
+}
+
+// ==================== Favorites ====================
+export interface Favorite {
+  id: string
+  userId: string
+  productId: string
+  product?: StoreProduct
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AddFavoriteDto {
+  productId: string
 }
 
 export interface AddToCartDto {

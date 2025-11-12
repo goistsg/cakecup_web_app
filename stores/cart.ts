@@ -8,7 +8,6 @@ interface CartState {
   isOpen: boolean
   loading: boolean
   error: string | null
-  clientId: string | null
 }
 
 export const useCartStore = defineStore('cart', {
@@ -18,7 +17,6 @@ export const useCartStore = defineStore('cart', {
     isOpen: false,
     loading: false,
     error: null,
-    clientId: null,
   }),
 
   getters: {
@@ -27,7 +25,7 @@ export const useCartStore = defineStore('cart', {
     },
     
     total: (state) => {
-      return state.items.reduce((total, item) => total + item.subtotal, 0)
+      return state.items.reduce((total, item) => total + (item.quantity * item.price), 0)
     },
     
     formattedTotal(): string {
@@ -38,26 +36,23 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
-    setClientId(clientId: string) {
-      this.clientId = clientId
-    },
-
     async fetchCart() {
-      if (!this.clientId) {
-        console.warn('ClientId não definido')
-        return
-      }
-
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.getCart(this.clientId)
-        this.cart = response.data || response
-        this.items = this.cart?.items || []
+        const response = await api.getCart()
+        this.cart = response
+        this.items = response.items || []
         return response
       } catch (error: any) {
-        this.error = error.message || 'Erro ao carregar carrinho'
+        // Se não autenticado ou erro, limpar carrinho
+        if (error.statusCode === 401 || error.statusCode === 404) {
+          this.items = []
+          this.cart = null
+        } else {
+          this.error = error.message || 'Erro ao carregar carrinho'
+        }
         throw error
       } finally {
         this.loading = false
@@ -65,16 +60,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async addItem(productId: string, quantity: number = 1, variant?: string) {
-      if (!this.clientId) {
-        console.warn('ClientId não definido')
-        return
-      }
-
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.addToCart(this.clientId, {
+        const response = await api.addToCart({
           productId,
           quantity,
           variant,
@@ -85,6 +75,7 @@ export const useCartStore = defineStore('cart', {
         return response
       } catch (error: any) {
         this.error = error.message || 'Erro ao adicionar ao carrinho'
+        console.error('Erro ao adicionar ao carrinho:', error)
         throw error
       } finally {
         this.loading = false
@@ -92,16 +83,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async updateQuantity(itemId: string, quantity: number) {
-      if (!this.clientId) {
-        console.warn('ClientId não definido')
-        return
-      }
-
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.updateCartItem(this.clientId, itemId, quantity)
+        const response = await api.updateCartItem(itemId, quantity)
         
         // Atualizar carrinho localmente
         await this.fetchCart()
@@ -115,16 +101,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async removeItem(itemId: string) {
-      if (!this.clientId) {
-        console.warn('ClientId não definido')
-        return
-      }
-
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.removeFromCart(this.clientId, itemId)
+        const response = await api.removeFromCart(itemId)
         
         // Atualizar carrinho localmente
         await this.fetchCart()
@@ -138,16 +119,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async clearCart() {
-      if (!this.clientId) {
-        console.warn('ClientId não definido')
-        return
-      }
-
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.clearCart(this.clientId)
+        const response = await api.clearCart()
         this.items = []
         this.cart = null
         return response
@@ -172,6 +148,13 @@ export const useCartStore = defineStore('cart', {
     },
 
     clearError() {
+      this.error = null
+    },
+
+    // Limpar carrinho localmente (sem API call) - usado no logout
+    clearLocalCart() {
+      this.items = []
+      this.cart = null
       this.error = null
     },
   },

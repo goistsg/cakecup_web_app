@@ -38,6 +38,12 @@
               <NuxtLink to="/orders" @click="showUserMenu = false">
                 <i class="fas fa-box"></i> Meus Pedidos
               </NuxtLink>
+              <NuxtLink to="/profile/favorites" @click="showUserMenu = false">
+                <i class="fas fa-heart"></i> Meus Favoritos
+              </NuxtLink>
+              <NuxtLink to="/profile/addresses" @click="showUserMenu = false">
+                <i class="fas fa-map-marker-alt"></i> Meus Endereços
+              </NuxtLink>
               <button @click="handleLogout">
                 <i class="fas fa-sign-out-alt"></i> Sair
               </button>
@@ -60,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '~/stores/cart'
 import { useAuth } from '~/composables/useAuth'
@@ -88,6 +94,28 @@ const handleLogout = async () => {
   await logout()
   router.push('/')
 }
+
+// Carregar carrinho quando autenticado
+onMounted(async () => {
+  if (isAuthenticated.value) {
+    try {
+      await cartStore.fetchCart()
+    } catch (error) {
+      console.error('Erro ao carregar carrinho:', error)
+    }
+  }
+})
+
+// Observar mudanças na autenticação
+watch(isAuthenticated, async (newValue) => {
+  if (newValue) {
+    try {
+      await cartStore.fetchCart()
+    } catch (error) {
+      console.error('Erro ao carregar carrinho:', error)
+    }
+  }
+})
 
 // Fechar menu ao clicar fora
 if (process.client) {
