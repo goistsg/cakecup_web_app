@@ -26,12 +26,12 @@
         <!-- Contact Cards -->
         <div class="contact-grid">
           <!-- WhatsApp -->
-          <a href="https://wa.me/5541991655777" target="_blank" class="contact-card whatsapp-card">
+          <a href="https://wa.me/5541999999999" target="_blank" class="contact-card whatsapp-card">
             <div class="card-icon">
               <i class="fab fa-whatsapp"></i>
             </div>
             <h3>WhatsApp</h3>
-            <p class="contact-info">(41) 99165-5777</p>
+            <p class="contact-info">(41) 99999-9999</p>
             <p class="contact-description">Atendimento rápido e direto pelo WhatsApp</p>
             <div class="card-badge">
               <i class="fas fa-external-link-alt"></i>
@@ -40,12 +40,12 @@
           </a>
 
           <!-- Telefone -->
-          <a href="tel:+554199165-5777" class="contact-card phone-card">
+          <a href="tel:+554199999-9999" class="contact-card phone-card">
             <div class="card-icon">
               <i class="fas fa-phone-alt"></i>
             </div>
             <h3>Telefone</h3>
-            <p class="contact-info">(41) 99165-5777</p>
+            <p class="contact-info">(41) 99999-9999</p>
             <p class="contact-description">Ligue para nós durante o horário comercial</p>
             <div class="card-badge">
               <i class="fas fa-clock"></i>
@@ -94,7 +94,7 @@
               <i class="fab fa-facebook-f"></i>
               <span>Facebook</span>
             </a>
-            <a href="https://wa.me/5541991655777" target="_blank" class="social-link whatsapp">
+            <a href="https://wa.me/5541999999999" target="_blank" class="social-link whatsapp">
               <i class="fab fa-whatsapp"></i>
               <span>WhatsApp</span>
             </a>

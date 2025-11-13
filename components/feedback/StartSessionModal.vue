@@ -50,7 +50,7 @@
                   type="tel"
                   inputmode="numeric"
                   class="phone-input"
-                  placeholder="(41) 99165-5745"
+                  placeholder="(41) 99999-9999"
                   maxlength="15"
                   required
                   :disabled="loading"
@@ -58,7 +58,7 @@
                 >
               </div>
               <small class="input-hint">
-                Digite apenas números. Ex: 41991655745
+                Digite apenas números. Ex: 41999999999
               </small>
             </div>
 

@@ -128,8 +128,8 @@ const router = useRouter()
 const route = useRoute()
 const { login, verifyOtp, error, loading } = useAuth()
 
-const whatsapp = ref('') // Formato para API: +5541991655745
-const phoneDisplay = ref('') // Formato visual: (41) 99165-5745
+const whatsapp = ref('') // Formato para API: +5541999999999
+const phoneDisplay = ref('') // Formato visual: (41) 99999-9999
 const otp = ref('')
 const otpSent = ref(false)
 const resendCooldown = ref(0)

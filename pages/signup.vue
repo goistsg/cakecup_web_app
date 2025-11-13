@@ -152,10 +152,10 @@ const authStore = useAuthStore()
 
 const formData = ref({
   name: '',
-  whatsapp: '', // Formato para API: +5541991655745
+  whatsapp: '', // Formato para API: +5541999999999
 })
 
-const phoneDisplay = ref('') // Formato visual: (41) 99165-5745
+const phoneDisplay = ref('') // Formato visual: (41) 99999-9999
 const otp = ref('')
 const otpSent = ref(false)
 const loading = ref(false)
