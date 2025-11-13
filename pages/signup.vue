@@ -21,6 +21,7 @@
                 required
                 :disabled="loading"
                 autocomplete="name"
+                class="name-input"
               >
             </div>
 
@@ -29,15 +30,21 @@
                 <i class="fab fa-whatsapp"></i>
                 WhatsApp
               </label>
-              <input
-                id="whatsapp"
-                v-model="formData.whatsapp"
-                type="tel"
-                placeholder="+55 11 99999-9999"
-                required
-                :disabled="loading"
-                autocomplete="tel"
-              >
+              <div class="phone-input-wrapper">
+                <span class="phone-prefix">+55</span>
+                <input
+                  id="whatsapp"
+                  v-model="phoneDisplay"
+                  @input="formatPhone"
+                  type="tel"
+                  placeholder="(11) 91234-5678"
+                  required
+                  :disabled="loading"
+                  autocomplete="tel"
+                  maxlength="15"
+                  class="phone-input"
+                >
+              </div>
               <small class="input-hint">
                 Enviaremos um código de verificação via WhatsApp
               </small>
@@ -81,12 +88,15 @@
               <input
                 id="otp"
                 v-model="otp"
-                type="text"
+                type="tel"
+                inputmode="numeric"
+                pattern="[0-9]*"
                 placeholder="000000"
                 maxlength="6"
                 required
                 :disabled="loading"
                 class="otp-input"
+                autocomplete="one-time-code"
               >
               <small class="input-hint">
                 Digite o código de 6 dígitos
@@ -132,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 
@@ -142,14 +152,44 @@ const authStore = useAuthStore()
 
 const formData = ref({
   name: '',
-  whatsapp: '',
+  whatsapp: '', // Formato para API: +5541991655745
 })
 
+const phoneDisplay = ref('') // Formato visual: (41) 99165-5745
 const otp = ref('')
 const otpSent = ref(false)
 const loading = ref(false)
 const error = ref('')
 const resendCooldown = ref(0)
+
+// Validação do telefone
+const isPhoneValid = computed(() => {
+  const cleaned = phoneDisplay.value.replace(/\D/g, '')
+  return cleaned.length === 11 // DDD (2) + número (9)
+})
+
+// Formatar telefone visualmente
+const formatPhone = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  let value = input.value.replace(/\D/g, '') // Remove tudo que não é número
+  
+  // Limita a 11 dígitos (DDD + número)
+  value = value.substring(0, 11)
+  
+  // Formata: (##) #####-####
+  if (value.length > 0) {
+    if (value.length <= 2) {
+      phoneDisplay.value = `(${value}`
+    } else if (value.length <= 7) {
+      phoneDisplay.value = `(${value.substring(0, 2)}) ${value.substring(2)}`
+    } else {
+      phoneDisplay.value = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7)}`
+    }
+  }
+  
+  // Atualiza o valor para API: +55 + números
+  formData.value.whatsapp = value ? `+55${value}` : ''
+}
 
 // Enviar código OTP
 const handleSignup = async () => {
@@ -356,6 +396,7 @@ const resetForm = () => {
     border-radius: 12px;
     font-size: 1rem;
     transition: all 0.3s;
+    box-sizing: border-box;
 
     &:focus {
       outline: none;
@@ -368,11 +409,76 @@ const resetForm = () => {
       cursor: not-allowed;
     }
 
+    &.name-input {
+      padding: calc(1rem - 2px);
+      background: #fafafa;
+    }
+
     &.otp-input {
       text-align: center;
-      font-size: 1.5rem;
-      letter-spacing: 0.5rem;
+      font-size: 2rem;
       font-weight: 700;
+      letter-spacing: 0.75rem;
+      padding: calc(1rem - 2px);
+      background: #fafafa;
+      border: 2px solid #e0e0e0;
+      
+      &:focus {
+        background: white;
+        border-color: var(--primary);
+        letter-spacing: 0.75rem;
+      }
+
+      &::placeholder {
+        letter-spacing: 0.75rem;
+        opacity: 0.3;
+      }
+    }
+  }
+
+  // Wrapper do input de telefone
+  .phone-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fafafa;
+    transition: all 0.3s;
+    overflow: hidden;
+
+    &:focus-within {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(139, 0, 20, 0.1);
+    }
+
+    .phone-prefix {
+      padding: 1rem 1rem 1rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      background: linear-gradient(135deg, rgba(139, 0, 20, 0.05) 0%, rgba(233, 30, 99, 0.05) 100%);
+      border-right: 2px solid #e0e0e0;
+      user-select: none;
+    }
+
+    .phone-input {
+      flex: 1;
+      padding: 1rem 1.25rem;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+      }
+
+      &:disabled {
+        background-color: transparent;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
     }
   }
 
@@ -400,6 +506,7 @@ const resetForm = () => {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  box-sizing: border-box;
 
   i {
     font-size: 1.2rem;

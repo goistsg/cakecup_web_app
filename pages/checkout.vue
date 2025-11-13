@@ -190,14 +190,20 @@ async function finalizeOrder() {
     
     console.log('✅ Pedido criado com sucesso:', order)
     
-    // Limpar carrinho local
-    await clearCart()
-    
-    // Recarregar carrinho do servidor (deve estar vazio)
-    await cartStore.fetchCart()
-    
-    // Redirecionar para a página de pedidos
+    // Redirecionar IMEDIATAMENTE para a página de pedidos
     router.push('/orders')
+    
+    // Recarregar carrinho em background (após redirecionamento)
+    // O backend já limpa o carrinho ao finalizar o pedido
+    setTimeout(async () => {
+      try {
+        await cartStore.fetchCart()
+        console.log('✅ Carrinho atualizado após checkout')
+      } catch (err) {
+        console.log('⚠️ Erro ao recarregar carrinho (não crítico):', err)
+        // Não mostra erro para o usuário, é apenas limpeza de cache
+      }
+    }, 500)
   } catch (err: any) {
     error.value = err.message || 'Erro ao finalizar pedido. Tente novamente.'
     console.error('❌ Erro ao finalizar pedido:', err)
