@@ -1,12 +1,13 @@
 <template>
   <header class="header">
-        <div class="header__container container">
-          <NuxtLink to="/" class="header__logo">
-            <img src="/cakecup_logo.png" alt="CakeCup Store" class="logo-image" />
-            <span class="logo-text">CakeCup Store</span>
-          </NuxtLink>
+    <div class="header__container container">
+      <NuxtLink to="/" class="header__logo">
+        <img src="/cakecup_logo.png" alt="CakeCup Store" class="logo-image" />
+        <span class="logo-text">CakeCup Store</span>
+      </NuxtLink>
 
-      <nav class="header__nav">
+      <!-- Menu Desktop -->
+      <nav class="header__nav desktop-nav">
         <ul class="header__nav-list">
           <li><NuxtLink to="/">Home</NuxtLink></li>
           <li><NuxtLink to="/products">Produtos</NuxtLink></li>
@@ -19,6 +20,13 @@
       </nav>
 
       <div class="header__actions">
+        <!-- Botão Hambúrguer (Mobile) -->
+        <button class="hamburger-button" @click="toggleMobileMenu" aria-label="Menu">
+          <span :class="{ active: showMobileMenu }"></span>
+          <span :class="{ active: showMobileMenu }"></span>
+          <span :class="{ active: showMobileMenu }"></span>
+        </button>
+
         <!-- Botão de Login/Perfil -->
         <div v-if="isMounted" class="header__user">
           <NuxtLink v-if="!isAuthenticated" to="/login" class="btn-login">
@@ -60,6 +68,47 @@
         </div>
       </div>
     </div>
+
+    <!-- Menu Mobile -->
+    <Transition name="slide-fade">
+      <nav v-if="showMobileMenu" class="mobile-nav">
+        <ul class="mobile-nav__list">
+          <li><NuxtLink to="/" @click="closeMobileMenu">Home</NuxtLink></li>
+          <li><NuxtLink to="/products" @click="closeMobileMenu">Produtos</NuxtLink></li>
+          <li><NuxtLink to="/about" @click="closeMobileMenu">Sobre</NuxtLink></li>
+          <li><NuxtLink to="/contact" @click="closeMobileMenu">Contato</NuxtLink></li>
+          
+          <!-- Links autenticados -->
+          <li v-if="isMounted && isAuthenticated" class="mobile-nav__divider"></li>
+          <li v-if="isMounted && isAuthenticated">
+            <NuxtLink to="/orders" @click="closeMobileMenu" class="nav-link-special">
+              <i class="fas fa-box"></i> Meus Pedidos
+            </NuxtLink>
+          </li>
+          <li v-if="isMounted && isAuthenticated">
+            <NuxtLink to="/profile/favorites" @click="closeMobileMenu">
+              <i class="fas fa-heart"></i> Meus Favoritos
+            </NuxtLink>
+          </li>
+          <li v-if="isMounted && isAuthenticated">
+            <NuxtLink to="/profile/addresses" @click="closeMobileMenu">
+              <i class="fas fa-map-marker-alt"></i> Meus Endereços
+            </NuxtLink>
+          </li>
+          <li v-if="isMounted && isAuthenticated" class="mobile-nav__divider"></li>
+          <li v-if="isMounted && isAuthenticated">
+            <button @click="handleLogout" class="logout-button">
+              <i class="fas fa-sign-out-alt"></i> Sair
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </Transition>
+
+    <!-- Overlay -->
+    <Transition name="fade">
+      <div v-if="showMobileMenu" class="mobile-overlay" @click="closeMobileMenu"></div>
+    </Transition>
   </header>
 </template>
 
@@ -76,6 +125,7 @@ const { isAuthenticated, user, logout } = useAuth()
 const { isMounted } = useClientMounted()
 
 const showUserMenu = ref(false)
+const showMobileMenu = ref(false)
 
 const userName = computed(() => {
   if (user.value?.name) {
@@ -89,8 +139,23 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
+const toggleMobileMenu = () => {
+  showMobileMenu.value = !showMobileMenu.value
+  if (showMobileMenu.value) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
+
+const closeMobileMenu = () => {
+  showMobileMenu.value = false
+  document.body.style.overflow = ''
+}
+
 const handleLogout = async () => {
   showUserMenu.value = false
+  closeMobileMenu()
   await logout()
   router.push('/')
 }
@@ -126,6 +191,11 @@ if (process.client) {
     }
   })
 }
+
+// Observar mudanças de rota para fechar menu mobile
+watch(() => router.currentRoute.value.path, () => {
+  closeMobileMenu()
+})
 </script>
 
 <style lang="scss">
@@ -419,11 +489,164 @@ if (process.client) {
   }
 }
 
+// Botão Hambúrguer
+.hamburger-button {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  z-index: 250;
+  
+  span {
+    width: 24px;
+    height: 3px;
+    background-color: var(--primary);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+    
+    &.active:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+    
+    &.active:nth-child(2) {
+      opacity: 0;
+    }
+    
+    &.active:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+  }
+}
+
+// Menu Mobile
+.mobile-nav {
+  display: none;
+  position: fixed;
+  top: 82px; // Altura do header
+  right: 0;
+  width: 280px;
+  max-width: 80vw;
+  height: calc(100vh - 82px);
+  background: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 210;
+  overflow-y: auto;
+  
+  &__list {
+    list-style: none;
+    padding: 1rem 0;
+    margin: 0;
+    
+    li {
+      margin: 0;
+      
+      a, button {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        width: 100%;
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        font-size: 1rem;
+        
+        i {
+          width: 20px;
+          color: var(--primary);
+          font-size: 1.1rem;
+        }
+        
+        &:hover {
+          background-color: var(--surface);
+          color: var(--primary);
+        }
+        
+        &.router-link-active {
+          background-color: rgba(255, 105, 180, 0.1);
+          color: var(--primary);
+          border-left: 3px solid var(--primary);
+        }
+        
+        &.nav-link-special {
+          color: var(--primary);
+          font-weight: 600;
+        }
+      }
+      
+      .logout-button {
+        color: var(--error-color);
+        
+        i {
+          color: var(--error-color);
+        }
+      }
+    }
+  }
+  
+  &__divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 0.5rem 0;
+  }
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 82px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 205;
+  backdrop-filter: blur(2px);
+}
+
+// Animações
+.slide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 768px) {
   .header {
-    &__nav-list {
-      gap: 1rem;
-      font-size: 0.9rem;
+    &__nav.desktop-nav {
+      display: none;
     }
 
     &__logo h1 {
@@ -473,6 +696,18 @@ if (process.client) {
         font-size: 0.65rem;
       }
     }
+  }
+  
+  .hamburger-button {
+    display: flex;
+  }
+  
+  .mobile-nav {
+    display: block;
+  }
+  
+  .mobile-overlay {
+    display: block;
   }
 }
 </style> 
