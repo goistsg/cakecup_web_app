@@ -34,10 +34,25 @@ export const useOrdersStore = defineStore('orders', {
 
       try {
         const response = await api.getOrders(clientId, companyId)
-        this.orders = response.data || response
+        console.log('📦 Pedidos recebidos:', response)
+        
+        // Garantir que sempre temos um array
+        const data = response.data || response
+        this.orders = Array.isArray(data) ? data : []
+        
+        // Normalizar estrutura dos pedidos - API pode retornar items/products e address/deliveryAddress
+        this.orders = this.orders.map(order => ({
+          ...order,
+          items: order.items || (order as any).products || [],
+          deliveryAddress: order.deliveryAddress || (order as any).address || null
+        }))
+        
+        console.log('✅ Pedidos processados:', this.orders)
         return response
       } catch (error: any) {
+        console.error('❌ Erro ao carregar pedidos:', error)
         this.error = error.message || 'Erro ao carregar pedidos'
+        this.orders = [] // Garantir array vazio em caso de erro
         throw error
       } finally {
         this.loading = false

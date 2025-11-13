@@ -7,7 +7,7 @@
     @mouseleave="hover = false"
   >
     <!-- Imagem do Produto -->
-    <div class="product-image" @click.stop>
+    <div class="product-image">
       <img :src="productImage" :alt="product.name">
       
       <!-- Badges de Estoque -->
@@ -43,7 +43,7 @@
 
       <!-- Overlay simples (variant simple) -->
       <div v-if="variant === 'simple'" class="product-overlay" :class="{ 'is-visible': hover }">
-        <button class="overlay-add-btn" @click="handleAddToCart(1)">
+        <button class="overlay-add-btn" @click.stop="handleAddToCart(1)">
           Adicionar ao Carrinho
         </button>
       </div>
@@ -77,7 +77,7 @@
           <!-- Controle de Quantidade (apenas no variant completo) -->
           <div v-if="showQuantityControl" class="quantity-control">
             <button 
-              @click="decreaseQuantity" 
+              @click.stop="decreaseQuantity" 
               class="quantity-btn"
               :disabled="productStock === 0 || quantity <= 1"
             >
@@ -85,7 +85,7 @@
             </button>
             <span class="quantity">{{ quantity }}</span>
             <button 
-              @click="increaseQuantity" 
+              @click.stop="increaseQuantity" 
               class="quantity-btn"
               :disabled="productStock === 0 || quantity >= productStock"
             >
@@ -95,7 +95,7 @@
 
           <!-- Botão Adicionar -->
           <button 
-            @click="handleAddToCart(quantity)" 
+            @click.stop="handleAddToCart(quantity)" 
             class="add-btn"
             :disabled="productStock === 0 || cartLoading"
           >

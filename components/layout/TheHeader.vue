@@ -135,7 +135,7 @@ if (process.client) {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
 
   &__container {
     display: flex;
@@ -301,6 +301,7 @@ if (process.client) {
       min-width: 200px;
       overflow: hidden;
       animation: slideDown 0.2s ease;
+      z-index: 150;
 
       a, button {
         display: flex;

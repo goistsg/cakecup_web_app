@@ -116,6 +116,7 @@ import OrderSummary from '~/components/checkout/OrderSummary.vue'
 const router = useRouter()
 const { items, loading, clearCart } = useCart()
 const { user, isAuthenticated } = useAuth()
+const cartStore = useCartStore()
 const clientsStore = useClientsStore()
 const ordersStore = useOrdersStore()
 
@@ -165,7 +166,6 @@ async function finalizeOrder() {
 
   try {
     // Obter cartId do store
-    const cartStore = useCartStore()
     const cartId = cartStore.cart?.id
     
     if (!cartId) {
@@ -193,8 +193,11 @@ async function finalizeOrder() {
     // Limpar carrinho local
     await clearCart()
     
-    // Redirecionar para confirmação
-    router.push(`/order-confirmation/${order.id}`)
+    // Recarregar carrinho do servidor (deve estar vazio)
+    await cartStore.fetchCart()
+    
+    // Redirecionar para a página de pedidos
+    router.push('/orders')
   } catch (err: any) {
     error.value = err.message || 'Erro ao finalizar pedido. Tente novamente.'
     console.error('❌ Erro ao finalizar pedido:', err)
