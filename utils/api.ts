@@ -202,6 +202,11 @@ class ApiService {
     return this.request<any>('/orders', { query })
   }
 
+  // Buscar todos os pedidos da empresa (rota para admin)
+  async getOrdersByCompany() {
+    return this.request<any>(`/orders/company`)
+  }
+
   async getOrder(id: string) {
     return this.request<any>(`/orders/${id}`)
   }
@@ -221,8 +226,9 @@ class ApiService {
   }
 
   async cancelOrder(id: string) {
-    return this.request<any>(`/orders/${id}/cancel`, {
-      method: 'POST',
+    return this.request<any>(`/orders/${id}`, {
+      method: 'PATCH',
+      body: { status: 'CANCELED' },
     })
   }
 
@@ -377,6 +383,11 @@ class ApiService {
       method: 'POST',
       body: data,
     })
+  }
+
+  // Get all feedback session results (admin only)
+  async getAllSessionResults() {
+    return this.request<any>('/feedbacks/session/results')
   }
 }
 

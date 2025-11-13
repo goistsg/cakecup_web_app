@@ -16,6 +16,8 @@
           
           <!-- Links autenticados -->
           <li v-if="isMounted && isAuthenticated"><NuxtLink to="/orders" class="nav-link-special">Meus Pedidos</NuxtLink></li>
+          <!-- Link admin -->
+          <li v-if="isMounted && isCompanyAdmin"><NuxtLink to="/admin/feedback-results" class="nav-link-admin">Feedbacks</NuxtLink></li>
         </ul>
       </nav>
 
@@ -43,6 +45,9 @@
             <div v-if="showUserMenu" class="user-dropdown">
               <NuxtLink to="/orders" @click="showUserMenu = false">
                 <i class="fas fa-box"></i> Meus Pedidos
+              </NuxtLink>
+              <NuxtLink v-if="isCompanyAdmin" to="/admin/feedback-results" @click="showUserMenu = false">
+                <i class="fas fa-comments"></i> Feedbacks
               </NuxtLink>
               <NuxtLink to="/profile/favorites" @click="showUserMenu = false">
                 <i class="fas fa-heart"></i> Meus Favoritos
@@ -85,6 +90,11 @@
               <i class="fas fa-box"></i> Meus Pedidos
             </NuxtLink>
           </li>
+          <li v-if="isMounted && isCompanyAdmin">
+            <NuxtLink to="/admin/feedback-results" @click="closeMobileMenu" class="nav-link-admin">
+              <i class="fas fa-comments"></i> Feedbacks
+            </NuxtLink>
+          </li>
           <li v-if="isMounted && isAuthenticated">
             <NuxtLink to="/profile/favorites" @click="closeMobileMenu">
               <i class="fas fa-heart"></i> Meus Favoritos
@@ -121,7 +131,7 @@ import { useClientMounted } from '~/composables/useClientMounted'
 
 const router = useRouter()
 const cartStore = useCartStore()
-const { isAuthenticated, user, logout } = useAuth()
+const { isAuthenticated, user, logout, isCompanyAdmin } = useAuth()
 const { isMounted } = useClientMounted()
 
 const showUserMenu = ref(false)
@@ -278,6 +288,11 @@ watch(() => router.currentRoute.value.path, () => {
 
       &.nav-link-special {
         color: var(--primary);
+        font-weight: 600;
+      }
+
+      &.nav-link-admin {
+        color: var(--secondary);
         font-weight: 600;
       }
     }
@@ -581,6 +596,11 @@ watch(() => router.currentRoute.value.path, () => {
         
         &.nav-link-special {
           color: var(--primary);
+          font-weight: 600;
+        }
+
+        &.nav-link-admin {
+          color: var(--secondary);
           font-weight: 600;
         }
       }

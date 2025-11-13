@@ -38,9 +38,26 @@
               </p>
             </div>
           </div>
-          <div class="order-status-badge" :class="`badge-${order.status.toLowerCase()}`">
+          <div v-if="!isEditingStatus" class="order-status-badge" :class="`badge-${order.status.toLowerCase()}`">
             <i :class="getStatusIcon(order.status)"></i>
             {{ getStatusText(order.status) }}
+            <button v-if="isCompanyAdmin" @click="startEditStatus" class="btn-edit-status">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+          <div v-else class="status-edit-container">
+            <select v-model="editedStatus" class="status-select">
+              <option value="OPEN">Pendente</option>
+              <option value="PAID">Confirmado</option>
+              <option value="DELIVERED">Entregue</option>
+              <option value="CANCELED">Cancelado</option>
+            </select>
+            <button @click="saveStatus" class="btn-save-status">
+              <i class="fas fa-check"></i>
+            </button>
+            <button @click="cancelEditStatus" class="btn-cancel-edit">
+              <i class="fas fa-times"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -190,7 +207,7 @@
           <!-- Ações -->
           <div class="actions-card">
             <button 
-              v-if="order.status === 'PENDING'"
+              v-if="order.status === 'OPEN'"
               @click="cancelOrder"
               class="btn-cancel-order"
             >
@@ -238,12 +255,14 @@ import type { Order, OrderStatus, PaymentMethod } from '~/types/api'
 
 const route = useRoute()
 const router = useRouter()
-const { user, isAuthenticated } = useAuth()
+const { user, isAuthenticated, isCompanyAdmin } = useAuth()
 const { api } = useApi()
 
 const order = ref<any | null>(null)
 const loading = ref(true)
 const error = ref('')
+const isEditingStatus = ref(false)
+const editedStatus = ref<OrderStatus>('OPEN' as OrderStatus)
 
 // Computed para lidar com a diferença entre 'items' e 'products' na API
 const orderItems = computed(() => {
@@ -254,34 +273,16 @@ const orderItems = computed(() => {
 
 const orderTimeline = [
   { 
-    status: 'PENDING', 
-    label: 'Pedido Recebido', 
+    status: 'OPEN', 
+    label: 'Pedido Pendente', 
     description: 'Aguardando confirmação',
     icon: 'fas fa-clock' 
   },
   { 
-    status: 'CONFIRMED', 
+    status: 'PAID', 
     label: 'Confirmado', 
     description: 'Pagamento aprovado',
     icon: 'fas fa-check-circle' 
-  },
-  { 
-    status: 'PREPARING', 
-    label: 'Em Preparo', 
-    description: 'Estamos preparando seu pedido',
-    icon: 'fas fa-utensils' 
-  },
-  { 
-    status: 'READY', 
-    label: 'Pronto', 
-    description: 'Pedido pronto para entrega',
-    icon: 'fas fa-box-open' 
-  },
-  { 
-    status: 'OUT_FOR_DELIVERY', 
-    label: 'Saiu para Entrega', 
-    description: 'Em rota de entrega',
-    icon: 'fas fa-truck' 
   },
   { 
     status: 'DELIVERED', 
@@ -292,13 +293,10 @@ const orderTimeline = [
 ]
 
 const statusLabels: Record<OrderStatus, string> = {
-  PENDING: 'Aguardando Confirmação',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Em Preparo',
-  READY: 'Pronto para Entrega',
-  OUT_FOR_DELIVERY: 'Saiu para Entrega',
+  OPEN: 'Pendente',
+  PAID: 'Confirmado',
   DELIVERED: 'Entregue',
-  CANCELLED: 'Cancelado',
+  CANCELED: 'Cancelado',
 }
 
 const paymentLabels: Record<PaymentMethod, string> = {
@@ -315,26 +313,20 @@ const getStatusText = (status: OrderStatus) => {
 
 const getStatusIcon = (status: OrderStatus) => {
   const icons: Record<OrderStatus, string> = {
-    PENDING: 'fas fa-clock',
-    CONFIRMED: 'fas fa-check-circle',
-    PREPARING: 'fas fa-utensils',
-    READY: 'fas fa-box',
-    OUT_FOR_DELIVERY: 'fas fa-truck',
+    OPEN: 'fas fa-clock',
+    PAID: 'fas fa-check-circle',
     DELIVERED: 'fas fa-check-double',
-    CANCELLED: 'fas fa-times-circle',
+    CANCELED: 'fas fa-times-circle',
   }
   return icons[status] || 'fas fa-info-circle'
 }
 
 const getStatusOrder = (status: OrderStatus): number => {
   const orderMap: Record<OrderStatus, number> = {
-    PENDING: 0,
-    CONFIRMED: 1,
-    PREPARING: 2,
-    READY: 3,
-    OUT_FOR_DELIVERY: 4,
-    DELIVERED: 5,
-    CANCELLED: -1,
+    OPEN: 0,
+    PAID: 1,
+    DELIVERED: 2,
+    CANCELED: -1,
   }
   return orderMap[status] || 0
 }
@@ -452,6 +444,33 @@ const cancelOrder = async () => {
   } catch (err: any) {
     console.error('Erro ao cancelar pedido:', err)
     alert(err.message || 'Erro ao cancelar pedido')
+  }
+}
+
+const startEditStatus = () => {
+  if (!order.value) return
+  editedStatus.value = order.value.status
+  isEditingStatus.value = true
+}
+
+const cancelEditStatus = () => {
+  isEditingStatus.value = false
+}
+
+const saveStatus = async () => {
+  if (!order.value) return
+  
+  try {
+    loading.value = true
+    await api.updateOrder(order.value.id, { status: editedStatus.value })
+    alert('Status atualizado com sucesso!')
+    isEditingStatus.value = false
+    await loadOrderDetails()
+  } catch (err: any) {
+    console.error('Erro ao atualizar status:', err)
+    alert(err.message || 'Erro ao atualizar status')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -642,17 +661,126 @@ onMounted(async () => {
     border-radius: 50px;
     font-size: 1rem;
     font-weight: 600;
+    position: relative;
     
-    &.badge-pending { background: #FFF3E0; color: #E65100; }
-    &.badge-confirmed { background: #E8F5E9; color: #2E7D32; }
-    &.badge-preparing { background: #E3F2FD; color: #1565C0; }
-    &.badge-ready { background: #F3E5F5; color: #6A1B9A; }
-    &.badge-out_for_delivery { background: #FBE9E7; color: #D84315; }
-    &.badge-delivered { background: #E8F5E9; color: #2E7D32; }
-    &.badge-cancelled { background: #FFEBEE; color: #C62828; }
+    &.badge-open { background: #FFF3E0; color: #E65100; }
+    &.badge-paid { background: #E8F5E9; color: #2E7D32; }
+    &.badge-delivered { background: #E3F2FD; color: #1565C0; }
+    &.badge-canceled { background: #FFEBEE; color: #C62828; }
 
     i {
       font-size: 1.2rem;
+    }
+    
+    .btn-edit-status {
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      color: inherit;
+      cursor: pointer;
+      padding: 0.375rem 0.75rem;
+      margin-left: 0.75rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.5);
+        border-color: rgba(255, 255, 255, 0.8);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+      
+      i {
+        font-size: 0.95rem;
+      }
+    }
+  }
+
+  .status-edit-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.05), rgba(139, 0, 20, 0.05));
+    border-radius: 16px;
+    border: 2px solid rgba(255, 105, 180, 0.2);
+    
+    .status-select {
+      padding: 0.875rem 1.25rem;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1;
+      color: var(--text);
+      
+      &:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);
+      }
+      
+      &:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
+      }
+
+      option {
+        padding: 0.5rem;
+        font-weight: 600;
+      }
+    }
+    
+    .btn-save-status,
+    .btn-cancel-edit {
+      padding: 0.875rem 1.25rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      
+      i {
+        font-size: 1.1rem;
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+    }
+    
+    .btn-save-status {
+      background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+      color: white;
+      
+      &:hover {
+        background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+      }
+    }
+    
+    .btn-cancel-edit {
+      background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
+      color: white;
+      
+      &:hover {
+        background: linear-gradient(135deg, #D32F2F 0%, #C62828 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+      }
     }
   }
 }

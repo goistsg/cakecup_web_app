@@ -59,6 +59,38 @@ export const useOrdersStore = defineStore('orders', {
       }
     },
 
+    // Buscar todos os pedidos da empresa (para admin)
+    async fetchOrdersByCompany(companyId: string) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.getOrdersByCompany()
+        console.log('📦 Pedidos da empresa recebidos:', response)
+        
+        // Garantir que sempre temos um array
+        const data = response.data || response
+        this.orders = Array.isArray(data) ? data : []
+        
+        // Normalizar estrutura dos pedidos
+        this.orders = this.orders.map(order => ({
+          ...order,
+          items: order.items || (order as any).products || [],
+          deliveryAddress: order.deliveryAddress || (order as any).address || null
+        }))
+        
+        console.log('✅ Pedidos da empresa processados:', this.orders)
+        return response
+      } catch (error: any) {
+        console.error('❌ Erro ao carregar pedidos da empresa:', error)
+        this.error = error.message || 'Erro ao carregar pedidos da empresa'
+        this.orders = []
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
     async fetchOrder(id: string) {
       this.loading = true
       this.error = null
@@ -118,7 +150,7 @@ export const useOrdersStore = defineStore('orders', {
         const response = await api.cancelOrder(id)
         const index = this.orders.findIndex(o => o.id === id)
         if (index !== -1) {
-          this.orders[index].status = 'CANCELLED' as any
+          this.orders[index].status = 'CANCELED' as any
         }
         return response
       } catch (error: any) {

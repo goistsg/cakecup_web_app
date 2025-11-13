@@ -22,7 +22,7 @@ export interface User {
   email?: string
   role?: 'ADMIN' | 'USER'
   plan?: Plan
-  companies?: Company[]
+  companies?: UserCompany[]
   createdAt?: string
   updatedAt?: string
 }
@@ -55,6 +55,7 @@ export interface CreateUserConsumerDto {
 export interface Company {
   id: string
   name: string
+  identifier?: string
   cnpj?: string
   phone?: string
   email?: string
@@ -63,8 +64,27 @@ export interface Company {
   state?: string
   zipCode?: string
   isActive?: boolean
+  isPrivate?: boolean
   createdAt?: string
   updatedAt?: string
+}
+
+export interface Segment {
+  id: string
+  name: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface UserCompany {
+  id: string
+  userId: string
+  companyId: string
+  segmentId: string
+  role: 'COMPANY_ADMIN' | 'COMPANY_USER'
+  createdAt: string
+  company: Company
+  segment: Segment
 }
 
 export interface CreateCompanyDto {
@@ -285,13 +305,10 @@ export interface Order {
 }
 
 export enum OrderStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  PREPARING = 'PREPARING',
-  READY = 'READY',
-  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
+  OPEN = 'OPEN',
+  PAID = 'PAID',
   DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED'
+  CANCELED = 'CANCELED'
 }
 
 export interface OrderItem {
@@ -557,7 +574,20 @@ export interface UserFeedback {
   improvementSuggestion?: string
   untestedReason?: string
   userId?: string
+  createdAt?: string
+}
+
+export interface FeedbackSessionResult {
+  sessionId: string
+  testerName: string
+  whatsapp: string
+  context: {
+    browser: string
+    version: string
+  }
+  feedbacks: UserFeedback[]
   createdAt: string
+  updatedAt: string
 }
 
 export interface CreateTestSessionDto {

@@ -136,7 +136,7 @@
               </div>
               <div class="order-actions">
                 <button 
-                  v-if="order.status === 'PENDING'"
+                  v-if="order.status === 'OPEN'"
                   @click.stop="cancelOrder(order.id)"
                   class="btn-cancel"
                 >
@@ -164,7 +164,7 @@ import { useOrdersStore } from '~/stores/orders'
 import type { OrderStatus } from '~/types/api'
 
 const router = useRouter()
-const { user, isAuthenticated } = useAuth()
+const { user, isAuthenticated, isCompanyAdmin, company } = useAuth()
 const ordersStore = useOrdersStore()
 
 const selectedFilter = ref<string>('all')
@@ -175,12 +175,10 @@ const orders = computed(() => ordersStore.orders)
 
 const filterOptions = {
   all: 'Todos',
-  PENDING: 'Pendentes',
-  CONFIRMED: 'Confirmados',
-  PREPARING: 'Em Preparo',
-  OUT_FOR_DELIVERY: 'Em Entrega',
+  OPEN: 'Pendentes',
+  PAID: 'Confirmados',
   DELIVERED: 'Entregues',
-  CANCELLED: 'Cancelados',
+  CANCELED: 'Cancelados',
 }
 
 const filteredOrders = computed(() => {
@@ -191,21 +189,16 @@ const filteredOrders = computed(() => {
 })
 
 const statusSteps = [
-  { status: 'PENDING', label: 'Pendente', icon: 'fas fa-clock' },
-  { status: 'CONFIRMED', label: 'Confirmado', icon: 'fas fa-check' },
-  { status: 'PREPARING', label: 'Preparando', icon: 'fas fa-utensils' },
-  { status: 'OUT_FOR_DELIVERY', label: 'Saiu', icon: 'fas fa-truck' },
+  { status: 'OPEN', label: 'Pendente', icon: 'fas fa-clock' },
+  { status: 'PAID', label: 'Confirmado', icon: 'fas fa-check' },
   { status: 'DELIVERED', label: 'Entregue', icon: 'fas fa-check-double' },
 ]
 
 const statusLabels: Record<OrderStatus, string> = {
-  PENDING: 'Aguardando Confirmação',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Em Preparo',
-  READY: 'Pronto para Entrega',
-  OUT_FOR_DELIVERY: 'Saiu para Entrega',
+  OPEN: 'Pendente',
+  PAID: 'Confirmado',
   DELIVERED: 'Entregue',
-  CANCELLED: 'Cancelado',
+  CANCELED: 'Cancelado',
 }
 
 const getStatusText = (status: OrderStatus) => {
@@ -214,26 +207,20 @@ const getStatusText = (status: OrderStatus) => {
 
 const getStatusIcon = (status: OrderStatus) => {
   const icons: Record<OrderStatus, string> = {
-    PENDING: 'fas fa-clock',
-    CONFIRMED: 'fas fa-check-circle',
-    PREPARING: 'fas fa-utensils',
-    READY: 'fas fa-box',
-    OUT_FOR_DELIVERY: 'fas fa-truck',
+    OPEN: 'fas fa-clock',
+    PAID: 'fas fa-check-circle',
     DELIVERED: 'fas fa-check-double',
-    CANCELLED: 'fas fa-times-circle',
+    CANCELED: 'fas fa-times-circle',
   }
   return icons[status] || 'fas fa-info-circle'
 }
 
 const getStatusOrder = (status: OrderStatus): number => {
   const order: Record<OrderStatus, number> = {
-    PENDING: 0,
-    CONFIRMED: 1,
-    PREPARING: 2,
-    READY: 3,
-    OUT_FOR_DELIVERY: 3,
-    DELIVERED: 4,
-    CANCELLED: -1,
+    OPEN: 0,
+    PAID: 1,
+    DELIVERED: 2,
+    CANCELED: -1,
   }
   return order[status] || 0
 }
@@ -276,10 +263,15 @@ const getItemPrice = (item: any) => {
 }
 
 const loadOrders = async () => {
-  if (!user.value?.id) return
-  
   try {
-    await ordersStore.fetchOrders(user.value.id)
+    // Se for admin da empresa, buscar todos os pedidos da empresa
+    if (isCompanyAdmin.value && company.value?.id) {
+      console.log('🔑 Admin detectado - buscando pedidos da empresa:', company.value.name)
+      await ordersStore.fetchOrdersByCompany(company.value.id)
+    } else if (user.value?.id) {
+      console.log('👤 Usuário comum - buscando apenas seus pedidos')
+      await ordersStore.fetchOrders(user.value.id)
+    }
   } catch (err) {
     console.error('Erro ao carregar pedidos:', err)
   }
@@ -541,13 +533,10 @@ onMounted(async () => {
   font-size: 0.9rem;
   font-weight: 600;
   
-  &.badge-pending { background: #FFF3E0; color: #E65100; }
-  &.badge-confirmed { background: #E8F5E9; color: #2E7D32; }
-  &.badge-preparing { background: #E3F2FD; color: #1565C0; }
-  &.badge-ready { background: #F3E5F5; color: #6A1B9A; }
-  &.badge-out_for_delivery { background: #FBE9E7; color: #D84315; }
-  &.badge-delivered { background: #E8F5E9; color: #2E7D32; }
-  &.badge-cancelled { background: #FFEBEE; color: #C62828; }
+  &.badge-open { background: #FFF3E0; color: #E65100; }
+  &.badge-paid { background: #E8F5E9; color: #2E7D32; }
+  &.badge-delivered { background: #E3F2FD; color: #1565C0; }
+  &.badge-canceled { background: #FFEBEE; color: #C62828; }
 
   i {
     font-size: 1rem;
