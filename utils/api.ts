@@ -347,6 +347,37 @@ class ApiService {
     
     return this.request<any>('/user-feedback', { query })
   }
+
+  // Test Feedback Session
+  async startTestSession(data: {
+    testerName: string
+    whatsapp: string
+    context: {
+      browser: string
+      version: string
+    }
+  }): Promise<{ sessionId: string }> {
+    return this.request<{ sessionId: string }>('/feedbacks/session/start', {
+      method: 'POST',
+      body: data,
+    })
+  }
+
+  async submitTestFeedback(data: {
+    sessionId: string
+    testerName: string
+    whatsapp: string
+    screen: string
+    worked: boolean
+    description?: string
+    improvementSuggestion?: string
+    userId?: string
+  }): Promise<any> {
+    return this.request<any>('/feedbacks', {
+      method: 'POST',
+      body: data,
+    })
+  }
 }
 
 export const api = new ApiService()
