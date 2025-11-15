@@ -186,12 +186,12 @@ export const useStorePublicStore = defineStore('storePublic', {
     /**
      * Buscar todos os produtos (público)
      */
-    async fetchProducts(companyId?: string) {
+    async fetchProducts(companyId?: string, categoryId?: string, search?: string, orderBy?: string) {
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.getProducts(companyId)
+        const response = await api.getProducts(companyId, categoryId, search, orderBy)
         
         // Converter StoreProduct para Product
         const storeProducts = response.data || []

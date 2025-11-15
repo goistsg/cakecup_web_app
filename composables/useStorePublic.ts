@@ -47,7 +47,8 @@ export function useStorePublic() {
     getProductsByCategory: (categoryId: string) => store.getProductsByCategory(categoryId),
     
     // Actions
-    fetchProducts: (companyId?: string) => store.fetchProducts(companyId),
+    fetchProducts: (companyId?: string, categoryId?: string, search?: string, orderBy?: string) => 
+      store.fetchProducts(companyId, categoryId, search, orderBy),
     fetchProduct: (id: string) => store.fetchProduct(id),
     fetchCategories: (companyId?: string) => store.fetchCategories(companyId),
     fetchCategory: (id: string) => store.fetchCategory(id),

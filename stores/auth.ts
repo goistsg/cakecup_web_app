@@ -33,27 +33,12 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    async login(whatsapp: string) {
+    async login(email: string, password: string) {
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.login(whatsapp)
-        return response
-      } catch (error: any) {
-        this.error = error.message || 'Erro ao enviar OTP'
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-
-    async verifyOtp(whatsapp: string, otp: string) {
-      this.loading = true
-      this.error = null
-
-      try {
-        const response = await api.verifyOtp(whatsapp, otp)
+        const response = await api.login(email, password)
         
         this.token = response.token
         this.user = response.user
@@ -72,7 +57,69 @@ export const useAuthStore = defineStore('auth', {
 
         return response
       } catch (error: any) {
-        this.error = error.message || 'OTP inválido'
+        this.error = error.message || 'Erro ao fazer login'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async signup(data: { name: string; whatsapp: string; email: string; password: string }) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.signup(data)
+        
+        // Após signup bem-sucedido, fazer login automaticamente
+        if (response.token) {
+          this.token = response.token
+          this.user = response.user
+          this.isAuthenticated = true
+
+          this.processCompanyInfo(response.user)
+
+          if (process.client) {
+            localStorage.setItem('auth_token', response.token)
+            localStorage.setItem('user', JSON.stringify(response.user))
+            localStorage.setItem('current_company', JSON.stringify(this.currentCompany))
+            localStorage.setItem('is_company_admin', String(this.isCompanyAdmin))
+          }
+        }
+
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao criar conta'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async forgotPassword(email: string) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.forgotPassword(email)
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao solicitar recuperação de senha'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async resetPassword(token: string, newPassword: string) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await api.resetPassword(token, newPassword)
+        return response
+      } catch (error: any) {
+        this.error = error.message || 'Erro ao redefinir senha'
         throw error
       } finally {
         this.loading = false

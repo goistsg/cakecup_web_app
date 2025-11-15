@@ -2,140 +2,136 @@
   <div class="signup-page">
     <div class="signup-container">
       <div class="signup-card">
-        <!-- Etapa 1: Cadastro -->
-        <div v-if="!otpSent">
+        <!-- Logo -->
+        <div class="logo-section">
+          <img src="/cakecup_logo.png" alt="CakeCup" class="logo" />
           <h1>Criar Conta</h1>
-          <p class="subtitle">Preencha seus dados para começar</p>
-
-          <form @submit.prevent="handleSignup" autocomplete="off">
-            <div class="form-group">
-              <label for="name">
-                <i class="fas fa-user"></i>
-                Nome Completo
-              </label>
-              <input
-                id="name"
-                v-model="formData.name"
-                type="text"
-                placeholder="Digite seu nome completo"
-                required
-                :disabled="loading"
-                autocomplete="name"
-                class="name-input"
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="whatsapp">
-                <i class="fab fa-whatsapp"></i>
-                WhatsApp
-              </label>
-              <div class="phone-input-wrapper">
-                <span class="phone-prefix">+55</span>
-                <input
-                  id="whatsapp"
-                  v-model="phoneDisplay"
-                  @input="formatPhone"
-                  type="tel"
-                  placeholder="(11) 91234-5678"
-                  required
-                  :disabled="loading"
-                  autocomplete="tel"
-                  maxlength="15"
-                  class="phone-input"
-                >
-              </div>
-              <small class="input-hint">
-                Enviaremos um código de verificação via WhatsApp
-              </small>
-            </div>
-
-            <button 
-              type="submit" 
-              class="btn-primary" 
-              :disabled="loading"
-              @click.prevent="handleSignup"
-            >
-              <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-arrow-right'"></i>
-              {{ loading ? 'Enviando...' : 'Continuar' }}
-            </button>
-          </form>
-
-          <!-- Link para Login (apenas na etapa 1) -->
-          <div class="login-link">
-            <p>Já tem uma conta?</p>
-            <NuxtLink to="/login" class="link">Fazer Login</NuxtLink>
-          </div>
+          <p>Cadastre-se para começar a fazer seus pedidos</p>
         </div>
 
-        <!-- Etapa 2: Verificação OTP -->
-        <div v-else>
-          <div class="otp-header">
-            <i class="fas fa-mobile-alt"></i>
-            <h1>Verificar WhatsApp</h1>
-            <p class="subtitle">
-              Enviamos um código para<br>
-              <strong>{{ formData.whatsapp }}</strong>
-            </p>
+        <!-- Signup Form -->
+        <form @submit.prevent="handleSignup" class="signup-form">
+          <div class="form-group">
+            <label for="name">
+              <i class="fas fa-user"></i>
+              Nome Completo
+            </label>
+            <input
+              id="name"
+              v-model="formData.name"
+              type="text"
+              placeholder="Seu nome completo"
+              required
+              :disabled="loading"
+            />
           </div>
 
-          <form @submit.prevent="handleVerifyOtp">
-            <div class="form-group">
-              <label for="otp">
-                <i class="fas fa-key"></i>
-                Código de Verificação
-              </label>
+          <div class="form-group">
+            <label for="whatsapp">
+              <i class="fab fa-whatsapp"></i>
+              WhatsApp
+            </label>
+            <div class="phone-input-wrapper">
+              <span class="phone-prefix">+55</span>
               <input
-                id="otp"
-                v-model="otp"
+                id="whatsapp"
+                v-model="phoneDisplay"
+                @input="formatPhone"
                 type="tel"
                 inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="000000"
-                maxlength="6"
+                class="phone-input"
+                placeholder="(41) 99999-9999"
+                maxlength="15"
                 required
                 :disabled="loading"
-                class="otp-input"
-                autocomplete="one-time-code"
-              >
-              <small class="input-hint">
-                Digite o código de 6 dígitos
-              </small>
+              />
             </div>
-
-            <button type="submit" class="btn-primary" :disabled="loading">
-              <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
-              {{ loading ? 'Verificando...' : 'Confirmar Cadastro' }}
-            </button>
-
-            <button 
-              type="button" 
-              class="btn-secondary" 
-              @click="resetForm"
-              :disabled="loading"
-            >
-              <i class="fas fa-arrow-left"></i>
-              Voltar
-            </button>
-          </form>
-
-          <div class="resend-section">
-            <p>Não recebeu o código?</p>
-            <button 
-              @click="resendOtp" 
-              class="btn-link"
-              :disabled="loading || resendCooldown > 0"
-            >
-              {{ resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar código' }}
-            </button>
+            <small class="input-hint">
+              Digite apenas números. Ex: 41999999999
+            </small>
           </div>
-        </div>
 
-        <!-- Mensagem de Erro -->
-        <div v-if="error" class="error-message">
-          <i class="fas fa-exclamation-circle"></i>
-          {{ error }}
-        </div>
+          <div class="form-group">
+            <label for="email">
+              <i class="fas fa-envelope"></i>
+              E-mail
+            </label>
+            <input
+              id="email"
+              v-model="formData.email"
+              type="email"
+              placeholder="seu@email.com"
+              required
+              :disabled="loading"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">
+              <i class="fas fa-lock"></i>
+              Senha
+            </label>
+            <div class="password-input-wrapper">
+              <input
+                id="password"
+                v-model="formData.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Mínimo 8 caracteres"
+                required
+                minlength="8"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                class="toggle-password"
+                @click="showPassword = !showPassword"
+                :disabled="loading"
+              >
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+            <PasswordStrength :password="formData.password" ref="passwordStrengthRef" />
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">
+              <i class="fas fa-lock"></i>
+              Confirmar Senha
+            </label>
+            <div class="password-input-wrapper">
+              <input
+                id="confirmPassword"
+                v-model="confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                placeholder="Digite a senha novamente"
+                required
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                class="toggle-password"
+                @click="showConfirmPassword = !showConfirmPassword"
+                :disabled="loading"
+              >
+                <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-signup" :disabled="loading || !isFormValid">
+            <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+            <span v-else>Criar Conta</span>
+          </button>
+
+          <div class="divider">
+            <span>ou</span>
+          </div>
+
+          <NuxtLink to="/login" class="btn-login">
+            <i class="fas fa-sign-in-alt"></i>
+            Já tenho uma conta
+          </NuxtLink>
+        </form>
       </div>
     </div>
   </div>
@@ -144,171 +140,81 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '~/stores/auth'
+import { useAuth } from '~/composables/useAuth'
+import PasswordStrength from '~/components/common/PasswordStrength.vue'
 
 const router = useRouter()
-const { api } = useApi()
-const authStore = useAuthStore()
+const { signup, loading, error, clearError } = useAuth()
 
 const formData = ref({
   name: '',
-  whatsapp: '', // Formato para API: +5541999999999
+  whatsapp: '+55',
+  email: '',
+  password: '',
 })
 
-const phoneDisplay = ref('') // Formato visual: (41) 99999-9999
-const otp = ref('')
-const otpSent = ref(false)
-const loading = ref(false)
-const error = ref('')
-const resendCooldown = ref(0)
+const phoneDisplay = ref('')
+const confirmPassword = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const passwordStrengthRef = ref<InstanceType<typeof PasswordStrength> | null>(null)
 
-// Validação do telefone
 const isPhoneValid = computed(() => {
-  const cleaned = phoneDisplay.value.replace(/\D/g, '')
-  return cleaned.length === 11 // DDD (2) + número (9)
+  const clean = formData.value.whatsapp.replace(/\D/g, '')
+  return clean.length === 13 // 55 + 11 dígitos
 })
 
-// Formatar telefone visualmente
+const isPasswordValid = computed(() => {
+  return passwordStrengthRef.value?.isValid ?? false
+})
+
+const isFormValid = computed(() => {
+  return (
+    formData.value.name.trim() &&
+    isPhoneValid.value &&
+    formData.value.email &&
+    isPasswordValid.value &&
+    formData.value.password === confirmPassword.value
+  )
+})
+
 const formatPhone = (event: Event) => {
   const input = event.target as HTMLInputElement
-  let value = input.value.replace(/\D/g, '') // Remove tudo que não é número
+  let value = input.value.replace(/\D/g, '')
   
-  // Limita a 11 dígitos (DDD + número)
+  // Limitar a 11 dígitos (DDD + número)
   value = value.substring(0, 11)
   
-  // Formata: (##) #####-####
-  if (value.length > 0) {
-    if (value.length <= 2) {
-      phoneDisplay.value = `(${value}`
-    } else if (value.length <= 7) {
-      phoneDisplay.value = `(${value.substring(0, 2)}) ${value.substring(2)}`
-    } else {
-      phoneDisplay.value = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7)}`
-    }
+  // Formatar (XX) XXXXX-XXXX
+  if (value.length <= 2) {
+    phoneDisplay.value = value
+  } else if (value.length <= 7) {
+    phoneDisplay.value = `(${value.slice(0, 2)}) ${value.slice(2)}`
+  } else {
+    phoneDisplay.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`
   }
   
-  // Atualiza o valor para API: +55 + números
-  formData.value.whatsapp = value ? `+55${value}` : ''
+  // Atualizar o valor real com +55
+  formData.value.whatsapp = '+55' + value
 }
 
-// Enviar código OTP
 const handleSignup = async () => {
-  loading.value = true
-  error.value = ''
+  if (!isFormValid.value) {
+    alert('Por favor, preencha todos os campos corretamente.')
+    return
+  }
+
+  clearError()
 
   try {
-    console.log('🚀 Iniciando cadastro para:', formData.value.whatsapp)
+    await signup(formData.value)
     
-    // Validar campos obrigatórios
-    if (!formData.value.name || !formData.value.whatsapp) {
-      throw new Error('Por favor, preencha todos os campos')
-    }
-
-    // 1. Criar usuário consumidor ANTES de enviar OTP
-    const config = useRuntimeConfig()
-    const companyId = config.public.companyId as string
-
-    if (!companyId) {
-      throw new Error('Company ID não configurado')
-    }
-
-    try {
-      console.log('📝 Criando usuário consumidor...')
-      await api.createUserConsumer({
-        name: formData.value.name,
-        whatsapp: formData.value.whatsapp,
-        companyId: companyId,
-      })
-      console.log('✅ Usuário criado com sucesso')
-    } catch (err: any) {
-      // Se usuário já existe, apenas continua o fluxo
-      console.log('ℹ️ Usuário já existe, continuando...')
-    }
-
-    // 2. Enviar OTP via WhatsApp
-    console.log('📱 Enviando OTP via WhatsApp...')
-    const response = await api.login(formData.value.whatsapp)
-    console.log('✅ OTP enviado com sucesso:', response)
-    
-    otpSent.value = true
-    
-    // Iniciar cooldown de reenvio
-    startResendCooldown()
+    alert('Conta criada com sucesso! Bem-vindo!')
+    router.push('/')
   } catch (err: any) {
-    console.error('❌ Erro no cadastro:', err)
-    error.value = err.message || 'Erro ao enviar código de verificação'
-  } finally {
-    loading.value = false
+    console.error('Erro ao criar conta:', err)
+    alert(err.message || 'Erro ao criar conta. Tente novamente.')
   }
-}
-
-// Verificar OTP e fazer login
-const handleVerifyOtp = async () => {
-  loading.value = true
-  error.value = ''
-
-  try {
-    console.log('🔑 Verificando código OTP...')
-    
-    // Usar o authStore para verificar OTP e autenticar o usuário
-    await authStore.verifyOtp(formData.value.whatsapp, otp.value)
-    
-    console.log('✅ OTP verificado e usuário autenticado com sucesso')
-
-    // Redirecionar
-    const route = useRoute()
-    const redirect = route.query.redirect as string || '/'
-    console.log('🚀 Redirecionando para:', redirect)
-    await router.push(redirect)
-  } catch (err: any) {
-    console.error('❌ Erro na verificação OTP:', err)
-    error.value = err.message || 'Código inválido ou expirado'
-  } finally {
-    loading.value = false
-  }
-}
-
-// Reenviar OTP
-const resendOtp = async () => {
-  loading.value = true
-  error.value = ''
-
-  try {
-    await api.login(formData.value.whatsapp)
-    startResendCooldown()
-    
-    // Feedback visual
-    const tempError = error.value
-    error.value = ''
-    setTimeout(() => {
-      if (!tempError) {
-        // Poderia adicionar uma mensagem de sucesso aqui
-      }
-    }, 100)
-  } catch (err: any) {
-    error.value = err.message || 'Erro ao reenviar código'
-    console.error(err)
-  } finally {
-    loading.value = false
-  }
-}
-
-// Cooldown de 60 segundos para reenvio
-const startResendCooldown = () => {
-  resendCooldown.value = 60
-  const interval = setInterval(() => {
-    resendCooldown.value--
-    if (resendCooldown.value <= 0) {
-      clearInterval(interval)
-    }
-  }, 1000)
-}
-
-// Voltar para o formulário de cadastro
-const resetForm = () => {
-  otpSent.value = false
-  otp.value = ''
-  error.value = ''
 }
 </script>
 
@@ -319,310 +225,278 @@ const resetForm = () => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.3;
+  }
 }
 
 .signup-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 500px;
+  position: relative;
+  z-index: 1;
 }
 
 .signup-card {
   background: white;
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 3rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.5s ease;
 
-  h1 {
-    text-align: center;
-    margin-bottom: 0.5rem;
-    color: var(--primary);
-    font-size: 2rem;
-  }
-
-  .subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 2rem;
-    line-height: 1.6;
-
-    strong {
-      color: var(--primary);
-      font-weight: 700;
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
 
-// Header OTP
-.otp-header {
+.logo-section {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 
-  > i {
-    font-size: 3rem;
-    color: var(--primary);
-    margin-bottom: 1rem;
-    display: block;
+  .logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+    animation: bounce 1s ease;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
 
   h1 {
-    margin-bottom: 0.75rem;
+    font-size: 2rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+
+  p {
+    color: var(--text-light);
+    font-size: 1rem;
   }
 }
 
-// Form Groups
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .form-group {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 
   label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    color: #333;
     font-weight: 600;
+    color: var(--text);
     font-size: 0.95rem;
 
     i {
       color: var(--primary);
-      font-size: 1rem;
     }
   }
 
   input {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
+    padding: 1rem 1.25rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     font-size: 1rem;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+    width: 100%;
     box-sizing: border-box;
 
     &:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(139, 0, 20, 0.1);
+      box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
     }
 
     &:disabled {
-      background-color: #f5f5f5;
+      background: #f5f5f5;
       cursor: not-allowed;
     }
 
-    &.name-input {
-      padding: calc(1rem - 2px);
-      background: #fafafa;
+    &::placeholder {
+      color: #999;
     }
-
-    &.otp-input {
-      text-align: center;
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: 0.75rem;
-      padding: calc(1rem - 2px);
-      background: #fafafa;
-      border: 2px solid #e0e0e0;
-      
-      &:focus {
-        background: white;
-        border-color: var(--primary);
-        letter-spacing: 0.75rem;
-      }
-
-      &::placeholder {
-        letter-spacing: 0.75rem;
-        opacity: 0.3;
-      }
-    }
-  }
-
-  // Wrapper do input de telefone
-  .phone-input-wrapper {
-    display: flex;
-    align-items: center;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    background: #fafafa;
-    transition: all 0.3s;
-    overflow: hidden;
-
-    &:focus-within {
-      border-color: var(--primary);
-      background: white;
-      box-shadow: 0 0 0 3px rgba(139, 0, 20, 0.1);
-    }
-
-    .phone-prefix {
-      padding: 1rem 1rem 1rem 1.25rem;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--primary);
-      background: linear-gradient(135deg, rgba(139, 0, 20, 0.05) 0%, rgba(233, 30, 99, 0.05) 100%);
-      border-right: 2px solid #e0e0e0;
-      user-select: none;
-    }
-
-    .phone-input {
-      flex: 1;
-      padding: 1rem 1.25rem;
-      border: none;
-      background: transparent;
-      font-size: 1rem;
-
-      &:focus {
-        outline: none;
-        box-shadow: none;
-      }
-
-      &:disabled {
-        background-color: transparent;
-        cursor: not-allowed;
-        opacity: 0.7;
-      }
-    }
-  }
-
-  .input-hint {
-    display: block;
-    margin-top: 0.5rem;
-    color: #999;
-    font-size: 0.85rem;
-    line-height: 1.4;
   }
 }
 
-// Buttons
-.btn-primary,
-.btn-secondary {
-  width: 100%;
-  padding: 1rem;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
+.phone-input-wrapper {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  box-sizing: border-box;
+  gap: 0.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 0 1rem;
+  transition: all 0.3s ease;
 
-  i {
-    font-size: 1.2rem;
+  &:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
   }
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .phone-prefix {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 1rem;
+    padding-right: 0.5rem;
+    border-right: 2px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .phone-input {
+    flex: 1;
+    border: none;
+    padding: 1rem 0.5rem;
+
+    &:focus {
+      box-shadow: none;
+      border: none;
+    }
   }
 }
 
-.btn-primary {
+.input-hint {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: -0.25rem;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    padding-right: 3rem;
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: var(--primary);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+}
+
+.btn-signup {
+  width: 100%;
+  padding: 1rem 2rem;
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 16px rgba(139, 0, 20, 0.25);
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+  box-sizing: border-box;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(139, 0, 20, 0.4);
+    box-shadow: 0 8px 20px rgba(255, 105, 180, 0.4);
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-}
-
-.btn-secondary {
-  background: #f5f5f5;
-  color: #666;
-
-  &:hover:not(:disabled) {
-    background: #e0e0e0;
-  }
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-  transition: color 0.3s;
-
-  &:hover:not(:disabled) {
-    color: var(--secondary);
+    transform: scale(0.98);
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
-}
-
-// Resend Section
-.resend-section {
-  text-align: center;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #e0e0e0;
-
-  p {
-    color: #666;
-    margin-bottom: 0.75rem;
-    font-size: 0.95rem;
-  }
-}
-
-// Error Message
-.error-message {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background-color: #ffebee;
-  border: 2px solid #f44336;
-  border-radius: 12px;
-  color: #c62828;
-  text-align: center;
-  margin-top: 1.5rem;
-  font-weight: 500;
 
   i {
     font-size: 1.2rem;
   }
 }
 
-// Login Link
-.login-link {
+.divider {
+  display: flex;
+  align-items: center;
   text-align: center;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #e0e0e0;
+  margin: 0.5rem 0;
 
-  p {
-    color: #666;
-    margin-bottom: 0.5rem;
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 2px solid #e0e0e0;
   }
 
-  .link {
-    color: var(--primary);
+  span {
+    padding: 0 1rem;
+    color: var(--text-light);
     font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s;
-
-    &:hover {
-      color: var(--secondary);
-      text-decoration: underline;
-    }
+    font-size: 0.9rem;
+    text-transform: uppercase;
   }
 }
 
-// Responsividade
+.btn-login {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+
+  &:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+  }
+}
+
 @media (max-width: 768px) {
   .signup-page {
     padding: 1rem;
@@ -630,16 +504,12 @@ const resetForm = () => {
 
   .signup-card {
     padding: 2rem 1.5rem;
-    border-radius: 16px;
+  }
 
+  .logo-section {
     h1 {
       font-size: 1.75rem;
     }
   }
-
-  .otp-header > i {
-    font-size: 2.5rem;
-  }
 }
 </style>
-

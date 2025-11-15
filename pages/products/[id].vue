@@ -86,7 +86,18 @@
           </div>
 
           <!-- Product Name -->
-          <h1 class="product-name">{{ product.name }}</h1>
+          <div class="product-name-wrapper">
+            <h1 class="product-name">{{ product.name }}</h1>
+            <button
+              v-if="isMounted && isCompanyAdmin"
+              @click="openEditModal"
+              class="btn-edit-product"
+              title="Editar produto"
+            >
+              <i class="fas fa-edit"></i>
+              Editar
+            </button>
+          </div>
 
           <!-- Product Description -->
           <p class="product-description">{{ product.description }}</p>
@@ -224,8 +235,13 @@
           <!-- Ingredients Tab -->
           <div v-if="activeTab === 'ingredients'" class="tab-pane">
             <h3>Ingredientes</h3>
-            <p v-if="(product as any).ingredients">{{ (product as any).ingredients }}</p>
-            <p v-else>
+            <ul v-if="product.ingredients && product.ingredients.length > 0" class="ingredients-list">
+              <li v-for="(ingredient, index) in product.ingredients" :key="index">
+                <i class="fas fa-check-circle"></i>
+                {{ ingredient }}
+              </li>
+            </ul>
+            <p v-else class="no-ingredients">
               Ingredientes de alta qualidade selecionados para garantir o melhor sabor e frescor.
               Consulte nossa equipe para informações detalhadas sobre alergênicos.
             </p>
@@ -259,6 +275,151 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Reviews Tab -->
+          <div v-if="activeTab === 'reviews'" class="tab-pane">
+            <div class="reviews-header">
+              <div class="reviews-summary">
+                <h3>Avaliações dos Clientes</h3>
+                <div class="rating-summary">
+                  <div class="average-rating">
+                    <span class="rating-number">{{ averageRating }}</span>
+                    <div class="stars-display">
+                      <i
+                        v-for="star in 5"
+                        :key="star"
+                        class="fas fa-star"
+                        :class="{ filled: star <= Math.round(parseFloat(String(averageRating))) }"
+                      ></i>
+                    </div>
+                    <span class="review-count">{{ reviews.length }} {{ reviews.length === 1 ? 'avaliação' : 'avaliações' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                v-if="isMounted && isAuthenticated"
+                @click="toggleReviewForm"
+                class="btn-add-review"
+              >
+                <i class="fas" :class="showReviewForm ? 'fa-times' : 'fa-plus'"></i>
+                {{ showReviewForm ? 'Cancelar' : 'Escrever Avaliação' }}
+              </button>
+            </div>
+
+            <!-- Review Form -->
+            <div v-if="showReviewForm" class="review-form-container">
+              <form @submit.prevent="submitReview" class="review-form">
+                <h4>Sua Avaliação</h4>
+
+                <!-- Rating -->
+                <div class="form-group">
+                  <label>Nota:</label>
+                  <div class="rating-input">
+                    <button
+                      v-for="star in 5"
+                      :key="star"
+                      type="button"
+                      @click="reviewForm.rating = star"
+                      class="star-btn"
+                      :class="{ active: star <= reviewForm.rating }"
+                    >
+                      <i class="fas fa-star"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Title -->
+                <div class="form-group">
+                  <label for="review-title">Título:</label>
+                  <input
+                    id="review-title"
+                    v-model="reviewForm.title"
+                    type="text"
+                    placeholder="Resuma sua experiência"
+                    maxlength="100"
+                    required
+                  />
+                </div>
+
+                <!-- Comment -->
+                <div class="form-group">
+                  <label for="review-comment">Comentário:</label>
+                  <textarea
+                    id="review-comment"
+                    v-model="reviewForm.comment"
+                    rows="4"
+                    placeholder="Conte-nos mais sobre sua experiência com este produto"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button
+                    type="button"
+                    @click="toggleReviewForm"
+                    class="btn-cancel"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    class="btn-submit"
+                    :disabled="submittingReview"
+                  >
+                    <i v-if="submittingReview" class="fas fa-spinner fa-spin"></i>
+                    {{ submittingReview ? 'Enviando...' : 'Enviar Avaliação' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Reviews List -->
+            <div class="reviews-list">
+              <div v-if="loadingReviews" class="loading-reviews">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando avaliações...</p>
+              </div>
+
+              <div v-else-if="reviews.length === 0" class="no-reviews">
+                <i class="fas fa-comment-slash"></i>
+                <p>Ainda não há avaliações para este produto</p>
+                <button
+                  v-if="isMounted && isAuthenticated"
+                  @click="toggleReviewForm"
+                  class="btn-first-review"
+                >
+                  Seja o primeiro a avaliar!
+                </button>
+              </div>
+
+              <div v-else class="review-items">
+                <div v-for="review in reviews" :key="review.id" class="review-item">
+                  <div class="review-header">
+                    <div class="review-author">
+                      <div class="author-avatar">
+                        <i class="fas fa-user"></i>
+                      </div>
+                      <div class="author-info">
+                        <span class="author-name">{{ review.user?.name || 'Usuário' }}</span>
+                        <span class="review-date">{{ new Date(review.createdAt).toLocaleDateString('pt-BR') }}</span>
+                      </div>
+                    </div>
+                    <div class="review-rating">
+                      <i
+                        v-for="star in 5"
+                        :key="star"
+                        class="fas fa-star"
+                        :class="{ filled: star <= review.rating }"
+                      ></i>
+                    </div>
+                  </div>
+                  <h5 class="review-title">{{ review.title }}</h5>
+                  <p class="review-comment">{{ review.comment }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -283,6 +444,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Product Form Modal (Admin) -->
+    <ProductFormModal
+      v-if="isMounted && isCompanyAdmin"
+      :is-open="showProductModal"
+      :product="product"
+      :company-id="companyId"
+      @close="showProductModal = false"
+      @success="handleProductSuccess"
+    />
   </div>
 </template>
 
@@ -292,17 +463,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCart } from '~/composables/useCart'
 import { useWishlist } from '~/composables/useWishlist'
 import { useAuth } from '~/composables/useAuth'
+import { useCompany } from '~/composables/useCompany'
 import { useStorePublic } from '~/composables/useStorePublic'
 import { useClientMounted } from '~/composables/useClientMounted'
 import ProductCard from '~/components/common/ProductCard.vue'
+import ProductFormModal from '~/components/admin/ProductFormModal.vue'
 import type { StoreProduct } from '~/types/api'
+import { api } from '~/utils/api'
 
 const route = useRoute()
 const router = useRouter()
 const { isMounted } = useClientMounted()
 const { addItem, openCart } = useCart()
 const { isFavorite, toggleFavorite, fetchFavorites } = useWishlist()
-const { isAuthenticated, user } = useAuth()
+const { isAuthenticated, user, isCompanyAdmin } = useAuth()
+const { companyId } = useCompany()
 const { products, fetchProducts } = useStorePublic()
 
 // State
@@ -315,13 +490,48 @@ const addingToCart = ref(false)
 const togglingFavorite = ref(false)
 const activeTab = ref('description')
 const relatedProducts = ref<any[]>([])
+const showProductModal = ref(false)
+
+// Reviews state
+const reviews = ref<any[]>([])
+const loadingReviews = ref(false)
+const showReviewForm = ref(false)
+const reviewForm = ref({
+  rating: 5,
+  title: '',
+  comment: ''
+})
+const submittingReview = ref(false)
 
 // Tabs configuration
 const tabs = [
   { id: 'description', label: 'Descrição', icon: 'fas fa-align-left' },
   { id: 'ingredients', label: 'Ingredientes', icon: 'fas fa-list' },
   { id: 'details', label: 'Especificações', icon: 'fas fa-info-circle' },
+  { id: 'reviews', label: 'Avaliações', icon: 'fas fa-star' },
 ]
+
+// Modal functions
+const openEditModal = async () => {
+  try {
+    // Buscar dados mais recentes do produto antes de abrir a modal
+    loading.value = true
+    await loadProduct()
+    showProductModal.value = true
+  } catch (err) {
+    console.error('Erro ao carregar dados do produto:', err)
+    alert('Erro ao carregar dados do produto. Tente novamente.')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleProductSuccess = async () => {
+  showProductModal.value = false
+  // Reload product
+  await loadProduct()
+  alert('Produto atualizado com sucesso!')
+}
 
 // Computed
 const productImages = computed(() => {
@@ -479,11 +689,89 @@ const loadProduct = async () => {
     if (user.value?.id) {
       await fetchFavorites()
     }
+
+    // Buscar avaliações do produto
+    await loadReviews()
   } catch (err: any) {
     console.error('Erro ao carregar produto:', err)
     error.value = err.message || 'Erro ao carregar produto'
   } finally {
     loading.value = false
+  }
+}
+
+// Reviews functions
+const loadReviews = async () => {
+  try {
+    loadingReviews.value = true
+    const productId = route.params.id as string
+    const response = await api.getProductReviews(productId)
+    reviews.value = response.data || response || []
+  } catch (err) {
+    console.error('Erro ao carregar avaliações:', err)
+    reviews.value = []
+  } finally {
+    loadingReviews.value = false
+  }
+}
+
+const averageRating = computed(() => {
+  if (reviews.value.length === 0) return 0
+  const sum = reviews.value.reduce((acc, review) => acc + review.rating, 0)
+  return (sum / reviews.value.length).toFixed(1)
+})
+
+const toggleReviewForm = () => {
+  if (!user.value?.id) {
+    alert('Por favor, faça login para avaliar este produto')
+    router.push(`/login?redirect=/products/${route.params.id}`)
+    return
+  }
+  showReviewForm.value = !showReviewForm.value
+  if (!showReviewForm.value) {
+    resetReviewForm()
+  }
+}
+
+const resetReviewForm = () => {
+  reviewForm.value = {
+    rating: 5,
+    title: '',
+    comment: ''
+  }
+}
+
+const submitReview = async () => {
+  if (!user.value?.id) {
+    alert('Por favor, faça login para avaliar')
+    return
+  }
+
+  if (!reviewForm.value.title || !reviewForm.value.comment) {
+    alert('Por favor, preencha todos os campos')
+    return
+  }
+
+  try {
+    submittingReview.value = true
+    const productId = route.params.id as string
+    
+    await api.createReview({
+      productId,
+      rating: reviewForm.value.rating,
+      title: reviewForm.value.title,
+      comment: reviewForm.value.comment
+    })
+
+    alert('Avaliação enviada com sucesso!')
+    showReviewForm.value = false
+    resetReviewForm()
+    await loadReviews()
+  } catch (err: any) {
+    console.error('Erro ao enviar avaliação:', err)
+    alert(err.message || 'Erro ao enviar avaliação. Tente novamente.')
+  } finally {
+    submittingReview.value = false
   }
 }
 
@@ -758,15 +1046,59 @@ watch(() => route.params.id, () => {
       }
     }
 
-    .product-name {
-      font-size: 2.5rem;
-      color: var(--text);
+    .product-name-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
       margin-bottom: 1rem;
-      font-weight: 700;
-      line-height: 1.2;
+
+      .product-name {
+        font-size: 2.5rem;
+        color: var(--text);
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+
+        @media (max-width: 768px) {
+          font-size: 2rem;
+        }
+      }
+
+      .btn-edit-product {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+        white-space: nowrap;
+        font-size: 1rem;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 105, 180, 0.4);
+        }
+
+        i {
+          font-size: 1rem;
+        }
+      }
 
       @media (max-width: 768px) {
-        font-size: 2rem;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .btn-edit-product {
+          width: 100%;
+          justify-content: center;
+        }
       }
     }
 
@@ -1079,6 +1411,45 @@ watch(() => route.params.id, () => {
           margin-bottom: 1rem;
         }
 
+        .ingredients-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          li {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: #f9f9f9;
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.05rem;
+            color: var(--text);
+            transition: all 0.3s ease;
+
+            i {
+              color: var(--primary);
+              font-size: 1rem;
+            }
+
+            &:hover {
+              background: #f0f0f0;
+              transform: translateX(5px);
+            }
+          }
+        }
+
+        .no-ingredients {
+          padding: 2rem;
+          background: #f9f9f9;
+          border-radius: 12px;
+          text-align: center;
+          color: #666;
+          font-style: italic;
+        }
+
         .specs-table {
           width: 100%;
           border-collapse: separate;
@@ -1146,6 +1517,352 @@ watch(() => route.params.id, () => {
   }
   75% {
     transform: scale(1.2);
+  }
+}
+
+// Reviews Styles
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+
+  .reviews-summary {
+    flex: 1;
+
+    h3 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .rating-summary {
+    .average-rating {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .rating-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      .stars-display {
+        display: flex;
+        gap: 0.25rem;
+
+        i {
+          font-size: 1.5rem;
+          color: #ddd;
+
+          &.filled {
+            color: #FFD700;
+          }
+        }
+      }
+
+      .review-count {
+        color: #666;
+        font-size: 0.95rem;
+      }
+    }
+  }
+
+  .btn-add-review {
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 105, 180, 0.4);
+    }
+  }
+}
+
+.review-form-container {
+  background: #f9f9f9;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+
+  .review-form {
+    h4 {
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+
+      label {
+        display: block;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+    }
+
+    .rating-input {
+      display: flex;
+      gap: 0.5rem;
+
+      .star-btn {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover,
+        &.active {
+          color: #FFD700;
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+
+      button {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-sizing: border-box;
+      }
+
+      .btn-cancel {
+        background: white;
+        color: var(--text-light);
+        border: 2px solid #e0e0e0;
+
+        &:hover {
+          background: #f5f5f5;
+          border-color: #ccc;
+        }
+      }
+
+      .btn-submit {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+
+        &:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 105, 180, 0.4);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}
+
+.reviews-list {
+  .loading-reviews,
+  .no-reviews {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+
+    i {
+      font-size: 3rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-first-review {
+      padding: 0.875rem 1.5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 105, 180, 0.4);
+      }
+    }
+  }
+
+  .review-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .review-item {
+      background: white;
+      border: 2px solid #f0f0f0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);
+      }
+
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        .review-author {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+
+          .author-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+          }
+
+          .author-info {
+            display: flex;
+            flex-direction: column;
+
+            .author-name {
+              font-weight: 600;
+              color: var(--text);
+              font-size: 1rem;
+            }
+
+            .review-date {
+              font-size: 0.875rem;
+              color: #999;
+            }
+          }
+        }
+
+        .review-rating {
+          display: flex;
+          gap: 0.25rem;
+
+          i {
+            font-size: 1.125rem;
+            color: #ddd;
+
+            &.filled {
+              color: #FFD700;
+            }
+          }
+        }
+      }
+
+      .review-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+      }
+
+      .review-comment {
+        font-size: 1rem;
+        color: #666;
+        line-height: 1.6;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .reviews-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+
+    .btn-add-review {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .review-form-container {
+    padding: 1.5rem;
+
+    .form-actions {
+      flex-direction: column;
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .review-items {
+    .review-item {
+      .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+    }
   }
 }
 </style>

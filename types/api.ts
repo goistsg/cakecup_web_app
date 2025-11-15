@@ -1,11 +1,16 @@
 // ==================== Auth ====================
 export interface LoginDto {
-  whatsapp: string
+  email: string
+  password: string
 }
 
-export interface VerifyOtpDto {
-  whatsapp: string
-  otp: string
+export interface ForgotPasswordDto {
+  email: string
+}
+
+export interface ResetPasswordDto {
+  token: string
+  newPassword: string
 }
 
 export interface LoginResponse {
@@ -30,7 +35,8 @@ export interface User {
 export interface CreateUserDto {
   name: string
   whatsapp: string
-  email?: string
+  email: string
+  password: string
   role?: 'ADMIN' | 'USER'
   planId?: string
 }
@@ -143,10 +149,15 @@ export interface Product {
   name: string
   description?: string
   price: number
+  costPrice?: number
+  salePrice?: number
+  lastPrice?: number
   sku?: string
-  category?: Category
+  category?: Category | string
   categoryId?: string
   images?: ProductImage[]
+  imageUrls?: string[]
+  ingredients?: string[]
   stock?: number
   isActive?: boolean
   companyId?: string
@@ -165,9 +176,15 @@ export interface ProductImage {
 export interface CreateProductDto {
   name: string
   description?: string
-  price: number
+  price?: number
+  costPrice?: number
+  salePrice?: number
+  lastPrice?: number
   sku?: string
+  category?: string
   categoryId?: string
+  imageUrls?: string[]
+  ingredients?: string[]
   stock?: number
   isActive?: boolean
   companyId: string
@@ -176,6 +193,12 @@ export interface CreateProductDto {
 export interface UpdateProductDto {
   name?: string
   description?: string
+  costPrice?: number
+  salePrice?: number
+  lastPrice?: number
+  category?: string
+  imageUrls?: string[]
+  ingredients?: string[]
   price?: number
   sku?: string
   categoryId?: string
@@ -551,6 +574,31 @@ export interface ProductFavorite {
 
 export interface ProductFavoriteDto {
   productId: string
+}
+
+// ==================== Product Reviews ====================
+export interface ProductReview {
+  id: string
+  productId: string
+  orderId?: string
+  userId: string
+  rating: number
+  title: string
+  comment: string
+  createdAt: string
+  updatedAt: string
+  user?: {
+    id: string
+    name: string
+  }
+}
+
+export interface CreateReviewDto {
+  productId: string
+  orderId?: string
+  rating: number
+  title: string
+  comment: string
 }
 
 // ==================== Test Feedback ====================

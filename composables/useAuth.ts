@@ -17,8 +17,10 @@ export function useAuth() {
     isCompanyAdmin: computed(() => authStore.isAdminOfCompany),
 
     // Actions
-    login: (whatsapp: string) => authStore.login(whatsapp),
-    verifyOtp: (whatsapp: string, otp: string) => authStore.verifyOtp(whatsapp, otp),
+    login: (email: string, password: string) => authStore.login(email, password),
+    signup: (data: { name: string; whatsapp: string; email: string; password: string }) => authStore.signup(data),
+    forgotPassword: (email: string) => authStore.forgotPassword(email),
+    resetPassword: (token: string, newPassword: string) => authStore.resetPassword(token, newPassword),
     logout: () => authStore.logout(),
     fetchProfile: () => authStore.fetchProfile(),
     initAuth: () => authStore.initAuth(),

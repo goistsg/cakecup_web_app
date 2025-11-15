@@ -1,16 +1,34 @@
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-card">
+  <div class="forgot-password-page">
+    <div class="forgot-password-container">
+      <div class="forgot-password-card">
         <!-- Logo -->
         <div class="logo-section">
           <img src="/cakecup_logo.png" alt="CakeCup" class="logo" />
-          <h1>Bem-vindo de volta!</h1>
-          <p>Entre com sua conta para continuar</p>
+          <h1>Esqueceu a senha?</h1>
+          <p>Digite seu e-mail para receber instruções de recuperação</p>
         </div>
 
-        <!-- Login Form -->
-        <form @submit.prevent="handleLogin" class="login-form">
+        <!-- Success State -->
+        <div v-if="emailSent" class="success-state">
+          <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h2>E-mail enviado!</h2>
+          <p>
+            Enviamos as instruções para redefinir sua senha para
+            <strong>{{ email }}</strong>
+          </p>
+          <p class="hint">Verifique sua caixa de entrada e spam.</p>
+          
+          <NuxtLink to="/login" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Voltar para o login
+          </NuxtLink>
+        </div>
+
+        <!-- Form State -->
+        <form v-else @submit.prevent="handleSubmit" class="forgot-password-form">
           <div class="form-group">
             <label for="email">
               <i class="fas fa-envelope"></i>
@@ -26,50 +44,14 @@
             />
           </div>
 
-          <div class="form-group">
-            <label for="password">
-              <i class="fas fa-lock"></i>
-              Senha
-            </label>
-            <div class="password-input-wrapper">
-              <input
-                id="password"
-                v-model="password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Mínimo 8 caracteres"
-                required
-                minlength="8"
-                :disabled="loading"
-              />
-              <button
-                type="button"
-                class="toggle-password"
-                @click="showPassword = !showPassword"
-                :disabled="loading"
-              >
-                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <NuxtLink to="/forgot-password" class="forgot-password-link">
-              Esqueci minha senha
-            </NuxtLink>
-          </div>
-
-          <button type="submit" class="btn-login" :disabled="loading || !isFormValid">
+          <button type="submit" class="btn-submit" :disabled="loading || !email">
             <i v-if="loading" class="fas fa-spinner fa-spin"></i>
-            <span v-else>Entrar</span>
+            <span v-else>Enviar instruções</span>
           </button>
 
-          <div class="divider">
-            <span>ou</span>
-          </div>
-
-          <NuxtLink to="/signup" class="btn-signup">
-            <i class="fas fa-user-plus"></i>
-            Criar uma conta
+          <NuxtLink to="/login" class="btn-cancel">
+            <i class="fas fa-arrow-left"></i>
+            Voltar para o login
           </NuxtLink>
         </form>
       </div>
@@ -78,40 +60,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 
-const router = useRouter()
-const route = useRoute()
-const { login, loading, error, clearError } = useAuth()
+const { forgotPassword, loading, error, clearError } = useAuth()
 
 const email = ref('')
-const password = ref('')
-const showPassword = ref(false)
+const emailSent = ref(false)
 
-const isFormValid = computed(() => {
-  return email.value && password.value && password.value.length >= 8
-})
-
-const handleLogin = async () => {
+const handleSubmit = async () => {
   clearError()
 
   try {
-    await login(email.value, password.value)
-    
-    // Redirecionar para a página de origem ou home
-    const redirect = route.query.redirect as string
-    router.push(redirect || '/')
+    await forgotPassword(email.value)
+    emailSent.value = true
   } catch (err: any) {
-    console.error('Erro ao fazer login:', err)
-    alert(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
+    console.error('Erro ao solicitar recuperação:', err)
+    alert(err.message || 'Erro ao enviar e-mail de recuperação. Tente novamente.')
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.login-page {
+.forgot-password-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -132,14 +103,14 @@ const handleLogin = async () => {
   }
 }
 
-.login-container {
+.forgot-password-container {
   width: 100%;
   max-width: 450px;
   position: relative;
   z-index: 1;
 }
 
-.login-card {
+.forgot-password-card {
   background: white;
   border-radius: 24px;
   padding: 3rem;
@@ -187,7 +158,80 @@ const handleLogin = async () => {
   }
 }
 
-.login-form {
+.success-state {
+  text-align: center;
+  padding: 2rem 0;
+
+  .success-icon {
+    i {
+      font-size: 5rem;
+      color: #4CAF50;
+      margin-bottom: 1.5rem;
+      animation: scaleIn 0.5s ease;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  h2 {
+    color: var(--text);
+    margin-bottom: 1rem;
+    font-size: 1.75rem;
+  }
+
+  p {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+
+    strong {
+      color: var(--primary);
+      font-weight: 600;
+    }
+  }
+
+  .hint {
+    font-size: 0.9rem;
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    box-sizing: border-box;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 105, 180, 0.4);
+    }
+  }
+}
+
+.forgot-password-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -237,56 +281,7 @@ const handleLogin = async () => {
   }
 }
 
-.password-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  input {
-    padding-right: 3rem;
-  }
-
-  .toggle-password {
-    position: absolute;
-    right: 1rem;
-    background: none;
-    border: none;
-    color: var(--text-light);
-    cursor: pointer;
-    padding: 0.5rem;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: var(--primary);
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-  }
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -0.5rem;
-}
-
-.forgot-password-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-
-  &:hover {
-    color: var(--secondary);
-    text-decoration: underline;
-  }
-}
-
-.btn-login {
+.btn-submit {
   width: 100%;
   padding: 1rem 2rem;
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -319,61 +314,39 @@ const handleLogin = async () => {
   }
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 1rem 0;
-
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-bottom: 2px solid #e0e0e0;
-  }
-
-  span {
-    padding: 0 1rem;
-    color: var(--text-light);
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-  }
-}
-
-.btn-signup {
+.btn-cancel {
   width: 100%;
   padding: 1rem 2rem;
   background: white;
-  color: var(--primary);
-  border: 2px solid var(--primary);
+  color: var(--text-light);
+  border: 2px solid #e0e0e0;
   border-radius: 12px;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
   gap: 0.5rem;
 
   &:hover {
-    background: var(--primary);
-    color: white;
+    border-color: var(--primary);
+    color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
 @media (max-width: 768px) {
-  .login-page {
+  .forgot-password-page {
     padding: 1rem;
   }
 
-  .login-card {
+  .forgot-password-card {
     padding: 2rem 1.5rem;
   }
 
@@ -384,3 +357,4 @@ const handleLogin = async () => {
   }
 }
 </style>
+

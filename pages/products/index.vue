@@ -41,11 +41,23 @@
           <select v-model="sortBy" class="filter-select">
             <option value="">Ordenar por</option>
             <option value="name">Nome (A-Z)</option>
+            <option value="name-desc">Nome (Z-A)</option>
             <option value="price-asc">Menor preço</option>
             <option value="price-desc">Maior preço</option>
             <option value="newest">Mais recentes</option>
+            <option value="oldest">Mais antigos</option>
           </select>
         </div>
+
+        <!-- Botão Criar Produto (Admin) -->
+        <button 
+          v-if="isMounted && isCompanyAdmin"
+          @click="openCreateModal"
+          class="btn-create-product"
+        >
+          <i class="fas fa-plus-circle"></i>
+          Novo Produto
+        </button>
 
         <!-- Limpar filtros -->
         <button 
@@ -126,11 +138,21 @@
         </div>
       </button>
     </transition>
+
+    <!-- Product Form Modal (Admin) -->
+    <ProductFormModal
+      v-if="isMounted && isCompanyAdmin"
+      :is-open="showProductModal"
+      :product="null"
+      :company-id="companyId"
+      @close="showProductModal = false"
+      @success="handleProductSuccess"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useCart } from '~/composables/useCart'
 import { useStorePublic } from '~/composables/useStorePublic'
 import { useAuth } from '~/composables/useAuth'
@@ -138,10 +160,17 @@ import { useCompany } from '~/composables/useCompany'
 import { useWishlist } from '~/composables/useWishlist'
 import { useClientMounted } from '~/composables/useClientMounted'
 import ProductCard from '~/components/common/ProductCard.vue'
+import ProductFormModal from '~/components/admin/ProductFormModal.vue'
 import type { Product } from '~/types/api'
 
 // Client mounted state
 const { isMounted } = useClientMounted()
+
+// Auth state
+const { user, isCompanyAdmin } = useAuth()
+
+// Company
+const { companyId } = useCompany()
 
 // Carrinho (pode funcionar sem autenticação)
 const { 
@@ -164,41 +193,142 @@ const {
   filteredProducts
 } = useStorePublic()
 
-// Autenticação (opcional)
-const { user } = useAuth()
-
 // Wishlist/Favoritos
 const { isFavorite, toggleFavorite, fetchFavorites } = useWishlist()
 const togglingFavorite = ref<string | null>(null)
 
-// Company ID
-const { companyId } = useCompany()
+// Product Form Modal
+const showProductModal = ref(false)
+
+const openCreateModal = () => {
+  showProductModal.value = true
+}
+
+const handleProductSuccess = async () => {
+  // Reload products
+  await fetchProducts()
+  alert('Produto salvo com sucesso!')
+}
 
 const categoriaAtual = ref('')
 const searchQuery = ref('')
 const sortBy = ref('')
+let searchTimeout: NodeJS.Timeout | null = null
 
 // Computed para verificar se há filtros ativos
 const hasActiveFilters = computed(() => {
   return categoriaAtual.value !== '' || searchQuery.value !== '' || sortBy.value !== ''
 })
 
+// Mapear valores do sortBy para o formato da API
+const getOrderByParam = (sortValue: string): string | undefined => {
+  const orderByMap: Record<string, string> = {
+    'name': 'name:asc',
+    'name-desc': 'name:desc',
+    'price-asc': 'salePrice:asc',
+    'price-desc': 'salePrice:desc',
+    'newest': 'createdAt:desc',
+    'oldest': 'createdAt:asc'
+  }
+  return sortValue ? orderByMap[sortValue] : undefined
+}
+
+// Função auxiliar para buscar produtos com os filtros atuais
+const loadProductsWithFilters = async () => {
+  const orderBy = getOrderByParam(sortBy.value)
+  await fetchProducts(
+    companyId.value,
+    categoriaAtual.value || undefined,
+    searchQuery.value || undefined,
+    orderBy
+  )
+}
+
 // Limpar todos os filtros
-const clearAllFilters = () => {
+const clearAllFilters = async () => {
   categoriaAtual.value = ''
   searchQuery.value = ''
   sortBy.value = ''
   setSelectedCategory(null)
+  clearSavedFilters()
+  await fetchProducts(companyId.value)
+}
+
+// Restaurar filtros e scroll do sessionStorage
+const restoreFiltersAndScroll = () => {
+  if (process.client) {
+    const savedFilters = sessionStorage.getItem('products_filters')
+    const savedScroll = sessionStorage.getItem('products_scroll')
+    
+    if (savedFilters) {
+      try {
+        const filters = JSON.parse(savedFilters)
+        categoriaAtual.value = filters.categoria || ''
+        searchQuery.value = filters.search || ''
+        sortBy.value = filters.sortBy || ''
+      } catch (err) {
+        console.error('Erro ao restaurar filtros:', err)
+      }
+    }
+    
+    return savedScroll ? parseInt(savedScroll) : 0
+  }
+  return 0
+}
+
+// Salvar filtros e scroll no sessionStorage
+const saveFiltersAndScroll = () => {
+  if (process.client) {
+    const filters = {
+      categoria: categoriaAtual.value,
+      search: searchQuery.value,
+      sortBy: sortBy.value
+    }
+    sessionStorage.setItem('products_filters', JSON.stringify(filters))
+    sessionStorage.setItem('products_scroll', window.scrollY.toString())
+  }
+}
+
+// Limpar filtros salvos
+const clearSavedFilters = () => {
+  if (process.client) {
+    sessionStorage.removeItem('products_filters')
+    sessionStorage.removeItem('products_scroll')
+  }
+}
+
+// Listener de scroll para salvar posição periodicamente
+let scrollSaveTimer: NodeJS.Timeout | null = null
+const handleScroll = () => {
+  if (scrollSaveTimer) {
+    clearTimeout(scrollSaveTimer)
+  }
+  scrollSaveTimer = setTimeout(() => {
+    if (process.client) {
+      sessionStorage.setItem('products_scroll', window.scrollY.toString())
+    }
+  }, 200)
 }
 
 // Carregar produtos e categorias quando o componente for montado
 onMounted(async () => {
   try {
+    // Restaurar filtros salvos
+    const savedScroll = restoreFiltersAndScroll()
+    
     // Buscar produtos e categorias da loja pública
-    await Promise.all([
-      fetchProducts(),
-      fetchCategories()
-    ])
+    // Se temos filtros restaurados, usamos loadProductsWithFilters
+    if (categoriaAtual.value || searchQuery.value || sortBy.value) {
+      await Promise.all([
+        loadProductsWithFilters(),
+        fetchCategories()
+      ])
+    } else {
+      await Promise.all([
+        fetchProducts(),
+        fetchCategories()
+      ])
+    }
 
     // Buscar favoritos se o usuário estiver autenticado
     if (user.value?.id) {
@@ -208,23 +338,63 @@ onMounted(async () => {
         console.error('Erro ao carregar favoritos:', err)
       }
     }
+    
+    // Restaurar posição de scroll
+    if (savedScroll > 0) {
+      setTimeout(() => {
+        window.scrollTo({ top: savedScroll, behavior: 'instant' })
+      }, 100)
+    }
+    
+    // Adicionar listener de scroll
+    if (process.client) {
+      window.addEventListener('scroll', handleScroll, { passive: true })
+    }
   } catch (err) {
     console.error('Erro ao carregar dados:', err)
   }
 })
 
-// Observar mudanças nos filtros
-watch(categoriaAtual, (newCategory) => {
+// Observar mudanças nos filtros e recarregar produtos
+watch(categoriaAtual, async (newCategory) => {
   setSelectedCategory(newCategory || null)
+  await loadProductsWithFilters()
+  saveFiltersAndScroll()
 })
 
-watch(searchQuery, (newQuery) => {
-  // Implementar busca via store se disponível
-  // Por enquanto, filtraremos localmente
+// Debounce para a busca (aguarda 500ms após parar de digitar)
+watch(searchQuery, async (newQuery) => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  
+  searchTimeout = setTimeout(async () => {
+    await loadProductsWithFilters()
+    saveFiltersAndScroll()
+  }, 500)
 })
 
-watch(sortBy, (newSort) => {
-  // Implementar ordenação
+watch(sortBy, async (newSort) => {
+  await loadProductsWithFilters()
+  saveFiltersAndScroll()
+})
+
+// Salvar filtros antes de sair da página e limpar listeners
+onBeforeUnmount(() => {
+  saveFiltersAndScroll()
+  
+  // Limpar listener de scroll
+  if (process.client) {
+    window.removeEventListener('scroll', handleScroll)
+  }
+  
+  // Limpar timers
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  if (scrollSaveTimer) {
+    clearTimeout(scrollSaveTimer)
+  }
 })
 
 const toggleFavoriteProduct = async (productId: string) => {
@@ -422,6 +592,31 @@ const adicionarAoCarrinho = async (productId: string, quantity: number) => {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(139, 0, 20, 0.1);
           }
+        }
+      }
+
+      .btn-create-product {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 105, 180, 0.4);
+        }
+
+        i {
+          font-size: 1rem;
         }
       }
 

@@ -71,17 +71,31 @@ class ApiService {
   }
 
   // Auth
-  async login(whatsapp: string) {
-    return this.request<{ message: string }>('/auth/login', {
+  async login(email: string, password: string) {
+    return this.request<{ user: any; token: string; message: string }>('/auth/login', {
       method: 'POST',
-      body: { whatsapp },
+      body: { email, password },
     })
   }
 
-  async verifyOtp(whatsapp: string, otpCode: string) {
-    return this.request<{ user: any; token: string; message: string }>('/auth/verify-otp', {
+  async forgotPassword(email: string) {
+    return this.request<{ message: string }>('/auth/forgot-password', {
       method: 'POST',
-      body: { whatsapp, otpCode },
+      body: { email },
+    })
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, newPassword },
+    })
+  }
+
+  async signup(data: { name: string; whatsapp: string; email: string; password: string }) {
+    return this.request<{ user: any; token: string; message: string }>('/users/consumer', {
+      method: 'POST',
+      body: data,
     })
   }
 
@@ -103,9 +117,11 @@ class ApiService {
   }
 
   // Products (Store - sem autenticação)
-  async getProducts(companyId?: string, categoryId?: string) {
+  async getProducts(companyId?: string, categoryId?: string, search?: string, orderBy?: string) {
     const query: Record<string, any> = {}
     if (categoryId) query.category = categoryId // API usa 'category' não 'categoryId'
+    if (search) query.search = search
+    if (orderBy) query.orderBy = orderBy
     
     return this.request<any>('/store/products', { query })
   }
@@ -229,6 +245,18 @@ class ApiService {
     return this.request<any>(`/orders/${id}`, {
       method: 'PATCH',
       body: { status: 'CANCELED' },
+    })
+  }
+
+  // Reviews
+  async getProductReviews(productId: string) {
+    return this.request<any>(`/reviews?productId=${productId}`)
+  }
+
+  async createReview(data: any) {
+    return this.request<any>('/reviews', {
+      method: 'POST',
+      body: data,
     })
   }
 
