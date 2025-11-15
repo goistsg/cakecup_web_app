@@ -103,6 +103,20 @@ class ApiService {
     return this.request<{ user: any }>('/auth/me')
   }
 
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>('/users/change-password', {
+      method: 'PATCH',
+      body: { currentPassword, newPassword },
+    })
+  }
+
+  async updateProfile(userId: string, data: { name?: string; whatsapp?: string }) {
+    return this.request<{ message: string; user: any }>(`/users/${userId}`, {
+      method: 'PATCH',
+      body: data,
+    })
+  }
+
   async logout() {
     return this.request<{ message: string }>('/auth/logout', {
       method: 'POST',

@@ -705,13 +705,29 @@ const loadReviews = async () => {
   try {
     loadingReviews.value = true
     const productId = route.params.id as string
+    console.log('Loading reviews for product:', productId)
     const response = await api.getProductReviews(productId)
-    reviews.value = response.data || response || []
-  } catch (err) {
+    console.log('Reviews response:', response)
+    
+    // Handle different response formats
+    if (Array.isArray(response)) {
+      reviews.value = response
+    } else if (response.data && Array.isArray(response.data)) {
+      reviews.value = response.data
+    } else if (response.reviews && Array.isArray(response.reviews)) {
+      reviews.value = response.reviews
+    } else {
+      reviews.value = []
+    }
+    
+    console.log('Reviews loaded:', reviews.value.length)
+  } catch (err: any) {
     console.error('Erro ao carregar avaliações:', err)
+    console.error('Error details:', err.message, err.response)
     reviews.value = []
   } finally {
     loadingReviews.value = false
+    console.log('Reviews loading complete. Count:', reviews.value.length)
   }
 }
 

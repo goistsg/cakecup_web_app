@@ -140,14 +140,15 @@
     </transition>
 
     <!-- Product Form Modal (Admin) -->
-    <ProductFormModal
-      v-if="isMounted && isCompanyAdmin"
-      :is-open="showProductModal"
-      :product="null"
-      :company-id="companyId"
-      @close="showProductModal = false"
-      @success="handleProductSuccess"
-    />
+    <template v-if="isMounted && isCompanyAdmin">
+      <ProductFormModal
+        :is-open="showProductModal"
+        :product="undefined"
+        :company-id="companyId || ''"
+        @close="closeProductModal"
+        @success="handleProductSuccess"
+      />
+    </template>
   </div>
 </template>
 
@@ -204,9 +205,14 @@ const openCreateModal = () => {
   showProductModal.value = true
 }
 
+const closeProductModal = () => {
+  showProductModal.value = false
+}
+
 const handleProductSuccess = async () => {
+  showProductModal.value = false
   // Reload products
-  await fetchProducts()
+  await loadProductsWithFilters()
   alert('Produto salvo com sucesso!')
 }
 

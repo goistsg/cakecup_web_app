@@ -43,18 +43,23 @@
             </button>
             
             <div v-if="showUserMenu" class="user-dropdown">
+              <NuxtLink to="/profile" @click="showUserMenu = false">
+                <i class="fas fa-user-circle"></i> Meu Perfil
+              </NuxtLink>
+              <NuxtLink to="/profile/addresses" @click="showUserMenu = false">
+                <i class="fas fa-map-marker-alt"></i> Meus Endereços
+              </NuxtLink>
+              <NuxtLink to="/profile/favorites" @click="showUserMenu = false">
+                <i class="fas fa-heart"></i> Meus Favoritos
+              </NuxtLink>
+              <div class="dropdown-divider"></div>
               <NuxtLink to="/orders" @click="showUserMenu = false">
                 <i class="fas fa-box"></i> Meus Pedidos
               </NuxtLink>
               <NuxtLink v-if="isCompanyAdmin" to="/admin/feedback-results" @click="showUserMenu = false">
                 <i class="fas fa-comments"></i> Feedbacks
               </NuxtLink>
-              <NuxtLink to="/profile/favorites" @click="showUserMenu = false">
-                <i class="fas fa-heart"></i> Meus Favoritos
-              </NuxtLink>
-              <NuxtLink to="/profile/addresses" @click="showUserMenu = false">
-                <i class="fas fa-map-marker-alt"></i> Meus Endereços
-              </NuxtLink>
+              <div class="dropdown-divider"></div>
               <button @click="handleLogout">
                 <i class="fas fa-sign-out-alt"></i> Sair
               </button>
@@ -86,13 +91,13 @@
           <!-- Links autenticados -->
           <li v-if="isMounted && isAuthenticated" class="mobile-nav__divider"></li>
           <li v-if="isMounted && isAuthenticated">
-            <NuxtLink to="/orders" @click="closeMobileMenu" class="nav-link-special">
-              <i class="fas fa-box"></i> Meus Pedidos
+            <NuxtLink to="/profile" @click="closeMobileMenu">
+              <i class="fas fa-user-circle"></i> Meu Perfil
             </NuxtLink>
           </li>
-          <li v-if="isMounted && isCompanyAdmin">
-            <NuxtLink to="/admin/feedback-results" @click="closeMobileMenu" class="nav-link-admin">
-              <i class="fas fa-comments"></i> Feedbacks
+          <li v-if="isMounted && isAuthenticated">
+            <NuxtLink to="/profile/addresses" @click="closeMobileMenu">
+              <i class="fas fa-map-marker-alt"></i> Meus Endereços
             </NuxtLink>
           </li>
           <li v-if="isMounted && isAuthenticated">
@@ -100,9 +105,15 @@
               <i class="fas fa-heart"></i> Meus Favoritos
             </NuxtLink>
           </li>
+          <li v-if="isMounted && isAuthenticated" class="mobile-nav__divider"></li>
           <li v-if="isMounted && isAuthenticated">
-            <NuxtLink to="/profile/addresses" @click="closeMobileMenu">
-              <i class="fas fa-map-marker-alt"></i> Meus Endereços
+            <NuxtLink to="/orders" @click="closeMobileMenu" class="nav-link-special">
+              <i class="fas fa-box"></i> Meus Pedidos
+            </NuxtLink>
+          </li>
+          <li v-if="isMounted && isCompanyAdmin">
+            <NuxtLink to="/admin/feedback-results" @click="closeMobileMenu" class="nav-link-admin">
+              <i class="fas fa-comments"></i> Feedbacks
             </NuxtLink>
           </li>
           <li v-if="isMounted && isAuthenticated" class="mobile-nav__divider"></li>
@@ -388,6 +399,12 @@ watch(() => router.currentRoute.value.path, () => {
       animation: slideDown 0.2s ease;
       z-index: 150;
 
+      .dropdown-divider {
+        height: 1px;
+        background: #eee;
+        margin: 0.25rem 0;
+      }
+
       a, button {
         display: flex;
         align-items: center;
@@ -421,7 +438,6 @@ watch(() => router.currentRoute.value.path, () => {
       }
 
       button {
-        border-top: 1px solid #eee;
         color: var(--error-color);
 
         i {

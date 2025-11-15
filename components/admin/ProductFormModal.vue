@@ -77,53 +77,21 @@
               ></textarea>
             </div>
 
-            <!-- Preços -->
-            <div class="form-row">
-              <div class="form-group">
-                <label for="costPrice">
-                  <i class="fas fa-dollar-sign"></i>
-                  Preço de Custo
-                </label>
-                <input
-                  id="costPrice"
-                  v-model.number="formData.costPrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  :disabled="loading"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="salePrice">
-                  <i class="fas fa-dollar-sign"></i>
-                  Preço de Venda *
-                </label>
-                <input
-                  id="salePrice"
-                  v-model.number="formData.salePrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  required
-                  :disabled="loading"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="lastPrice">
-                  <i class="fas fa-dollar-sign"></i>
-                  Preço Anterior
-                </label>
-                <input
-                  id="lastPrice"
-                  v-model.number="formData.lastPrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  :disabled="loading"
-                />
-              </div>
+            <!-- Preço -->
+            <div class="form-group">
+              <label for="salePrice">
+                <i class="fas fa-dollar-sign"></i>
+                Preço de Venda *
+              </label>
+              <input
+                id="salePrice"
+                v-model.number="formData.salePrice"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                required
+                :disabled="loading"
+              />
             </div>
 
             <!-- Estoque -->
@@ -287,54 +255,7 @@ const isFormValid = computed(() => {
          formData.value.salePrice > 0
 })
 
-// Watch for product changes to populate form
-watch(() => props.product, (newProduct) => {
-  if (newProduct) {
-    formData.value = {
-      name: newProduct.name,
-      sku: newProduct.sku || '',
-      category: typeof newProduct.category === 'string' ? newProduct.category : newProduct.category?.name || '',
-      description: newProduct.description || '',
-      costPrice: newProduct.costPrice,
-      salePrice: newProduct.salePrice || newProduct.price,
-      lastPrice: newProduct.lastPrice,
-      stock: newProduct.stock || 0,
-      imageUrls: newProduct.imageUrls && newProduct.imageUrls.length > 0 ? [...newProduct.imageUrls] : [''],
-      ingredients: newProduct.ingredients && newProduct.ingredients.length > 0 ? [...newProduct.ingredients] : [''],
-      companyId: props.companyId
-    }
-  } else {
-    resetForm()
-  }
-}, { immediate: true, deep: true })
-
-// Watch for modal opening to reload form data
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    if (props.product) {
-      // Edição: Recarregar dados do formulário quando a modal abre
-      formData.value = {
-        name: props.product.name,
-        sku: props.product.sku || '',
-        category: typeof props.product.category === 'string' ? props.product.category : props.product.category?.name || '',
-        description: props.product.description || '',
-        costPrice: props.product.costPrice,
-        salePrice: props.product.salePrice || props.product.price,
-        lastPrice: props.product.lastPrice,
-        stock: props.product.stock || 0,
-        imageUrls: props.product.imageUrls && props.product.imageUrls.length > 0 ? [...props.product.imageUrls] : [''],
-        ingredients: props.product.ingredients && props.product.ingredients.length > 0 ? [...props.product.ingredients] : [''],
-        companyId: props.companyId
-      }
-    } else {
-      // Criação: Resetar o formulário
-      resetForm()
-    }
-    // Limpar erro ao abrir a modal
-    error.value = ''
-  }
-})
-
+// Reset form function (defined before watches)
 const resetForm = () => {
   formData.value = {
     name: '',
@@ -351,6 +272,72 @@ const resetForm = () => {
   }
   error.value = ''
 }
+
+// Watch for product changes to populate form
+watch(() => props.product, (newProduct) => {
+  if (newProduct) {
+    const imageUrls = newProduct.imageUrls && newProduct.imageUrls.length > 0 
+      ? [...newProduct.imageUrls] 
+      : ['']
+    
+    const ingredients = newProduct.ingredients && newProduct.ingredients.length > 0 
+      ? [...newProduct.ingredients] 
+      : ['']
+    
+    formData.value = {
+      name: newProduct.name || '',
+      sku: newProduct.sku || '',
+      category: typeof newProduct.category === 'string' ? newProduct.category : newProduct.category?.name || '',
+      description: newProduct.description || '',
+      costPrice: newProduct.costPrice || undefined,
+      salePrice: newProduct.salePrice || newProduct.price || undefined,
+      lastPrice: newProduct.lastPrice || undefined,
+      stock: newProduct.stock || 0,
+      imageUrls,
+      ingredients,
+      companyId: props.companyId
+    }
+  } else {
+    resetForm()
+  }
+}, { immediate: true, deep: true })
+
+// Watch for modal opening to reload form data
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    if (props.product) {
+      // Edição: Recarregar dados do formulário quando a modal abre
+      const imageUrls = props.product.imageUrls && props.product.imageUrls.length > 0 
+        ? [...props.product.imageUrls] 
+        : ['']
+      
+      const ingredients = props.product.ingredients && props.product.ingredients.length > 0 
+        ? [...props.product.ingredients] 
+        : ['']
+      
+      formData.value = {
+        name: props.product.name || '',
+        sku: props.product.sku || '',
+        category: typeof props.product.category === 'string' ? props.product.category : props.product.category?.name || '',
+        description: props.product.description || '',
+        costPrice: props.product.costPrice || undefined,
+        salePrice: props.product.salePrice || props.product.price || undefined,
+        lastPrice: props.product.lastPrice || undefined,
+        stock: props.product.stock || 0,
+        imageUrls,
+        ingredients,
+        companyId: props.companyId
+      }
+      
+      console.log('FormData populado:', formData.value)
+    } else {
+      // Criação: Resetar o formulário
+      resetForm()
+    }
+    // Limpar erro ao abrir a modal
+    error.value = ''
+  }
+})
 
 const addImageUrl = () => {
   formData.value.imageUrls?.push('')
@@ -390,7 +377,8 @@ const handleSubmit = async () => {
     const cleanedData = {
       ...formData.value,
       imageUrls: formData.value.imageUrls?.filter(url => url.trim()) || [],
-      ingredients: formData.value.ingredients?.filter(ing => ing.trim()) || []
+      ingredients: formData.value.ingredients?.filter(ing => ing.trim()) || [],
+      companyId: props.companyId
     }
 
     if (isEditMode.value && props.product) {

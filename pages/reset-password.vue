@@ -153,7 +153,6 @@ const handleSubmit = async () => {
 <style lang="scss" scoped>
 .reset-password-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -39,12 +39,12 @@ export const useProductsStore = defineStore('products', {
   },
 
   actions: {
-    async fetchProducts(companyId?: string, categoryId?: string) {
+    async fetchProducts(companyId?: string, categoryId?: string, search?: string, orderBy?: string) {
       this.loading = true
       this.error = null
 
       try {
-        const response = await api.getProducts(companyId, categoryId)
+        const response = await api.getProducts(companyId, categoryId, search, orderBy)
         this.products = response.data || response
         return response
       } catch (error: any) {

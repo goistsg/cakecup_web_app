@@ -15,9 +15,14 @@ interface Product {
   name: string
   description: string
   price: number
+  costPrice?: number
+  salePrice?: number
+  lastPrice?: number
   sku: string
   category: string
   images: Array<{ url: string; isPrimary: boolean }>
+  imageUrls?: string[]
+  ingredients?: string[]
   isActive: boolean
   stock: number
   hasSample: boolean
@@ -199,10 +204,15 @@ export const useStorePublicStore = defineStore('storePublic', {
           id: p.id,
           name: p.name,
           description: p.description,
-          price: p.salePrice,
+          price: p.salePrice || p.price,
+          costPrice: p.costPrice,
+          salePrice: p.salePrice,
+          lastPrice: p.lastPrice,
           sku: p.sku,
           category: p.category,
-          images: p.imageUrls.map((url: string) => ({ url, isPrimary: true })),
+          images: p.imageUrls ? p.imageUrls.map((url: string) => ({ url, isPrimary: true })) : [],
+          imageUrls: p.imageUrls || [],
+          ingredients: p.ingredients || [],
           isActive: true,
           stock: p.stock,
           hasSample: p.hasSample,
