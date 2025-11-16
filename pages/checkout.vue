@@ -148,10 +148,13 @@ const canCheckout = computed(() => {
 })
 
 // Métodos
-async function onAddressSaved() {
+async function onAddressSaved(newAddressId: string) {
   if (user.value?.id) {
     const clientsStore = useClientsStore() as any
     await clientsStore.fetchAddresses(user.value.id)
+    
+    // Pré-selecionar o endereço recém-criado
+    selectedAddressId.value = newAddressId
   }
 }
 

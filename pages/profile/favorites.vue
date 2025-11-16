@@ -29,7 +29,6 @@
         :show-category="true"
         :show-sku="true"
         @toggle-favorite="handleRemoveFavorite(product.id)"
-        @add-to-cart="handleAddToCart"
       />
     </div>
 
@@ -80,40 +79,6 @@ const handleRemoveFavorite = async (productId: string) => {
   } catch (err: any) {
     console.error('Erro ao remover favorito:', err)
     alert(err.message || 'Erro ao remover favorito')
-  }
-}
-
-const handleAddToCart = async (productId: string, quantity: number) => {
-  try {
-    const product = productsWithFavorites.value.find(p => p.id === productId)
-    if (!product) {
-      alert('Produto não encontrado')
-      return
-    }
-
-    const stock = product.stock !== undefined ? product.stock : 999
-    
-    if (stock === 0) {
-      alert('Produto esgotado!')
-      return
-    }
-
-    if (!user.value?.id) {
-      alert('Por favor, faça login para adicionar produtos ao carrinho')
-      await router.push('/login?redirect=/profile/favorites')
-      return
-    }
-
-    await addItem(productId, quantity)
-    openCart()
-  } catch (err: any) {
-    console.error('Erro ao adicionar ao carrinho:', err)
-    if (err.statusCode === 401) {
-      alert('Sessão expirada. Por favor, faça login novamente.')
-      await router.push('/login?redirect=/profile/favorites')
-    } else {
-      alert(err.message || 'Erro ao adicionar produto ao carrinho')
-    }
   }
 }
 

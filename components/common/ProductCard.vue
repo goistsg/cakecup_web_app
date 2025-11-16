@@ -252,7 +252,7 @@ const handleAddToCart = async (qty: number) => {
     
     openCart()
     
-    // Emit para o pai caso queira fazer algo
+    // Emit para o pai apenas como notificação (não para fazer a chamada)
     emit('add-to-cart', props.product.id, qty)
   } catch (error: any) {
     console.error('Erro ao adicionar ao carrinho:', error)

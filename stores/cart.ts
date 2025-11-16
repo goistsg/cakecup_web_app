@@ -83,6 +83,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async updateQuantity(itemId: string, quantity: number) {
+      // Evitar chamadas duplicadas
+      if (this.loading) {
+        return
+      }
+      
       this.loading = true
       this.error = null
 

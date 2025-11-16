@@ -117,7 +117,6 @@
         :show-category="true"
         :show-sku="true"
         @toggle-favorite="toggleFavoriteProduct(product.id)"
-        @add-to-cart="adicionarAoCarrinho"
       />
     </section>
 
@@ -433,52 +432,6 @@ const toggleFavoriteProduct = async (productId: string) => {
     }
   } finally {
     togglingFavorite.value = null
-  }
-}
-
-const adicionarAoCarrinho = async (productId: string, quantity: number) => {
-  try {
-    // Buscar produto para validação
-    const product = filteredProducts.value.find(p => p.id === productId)
-    if (!product) {
-      alert('Produto não encontrado')
-      return
-    }
-    
-    // Verificar estoque
-    if (product.stock === 0) {
-      alert('Produto esgotado')
-      return
-    }
-    
-    if (quantity > product.stock) {
-      alert(`Apenas ${product.stock} unidades disponíveis`)
-      return
-    }
-    
-    // Verificar autenticação
-    if (!user.value?.id) {
-      // Redirecionar para login
-      alert('Por favor, faça login para adicionar produtos ao carrinho')
-      await navigateTo('/login?redirect=/products')
-      return
-    }
-    
-    // Adicionar ao carrinho no servidor
-    await addItem(productId, quantity)
-    
-    // Abrir modal do carrinho
-    openCart()
-  } catch (err: any) {
-    console.error('Erro ao adicionar ao carrinho:', err)
-    
-    // Mensagens de erro específicas
-    if (err.statusCode === 401) {
-      alert('Sessão expirada. Por favor, faça login novamente.')
-      await navigateTo('/login?redirect=/products')
-    } else {
-      alert(err.message || 'Erro ao adicionar produto ao carrinho')
-    }
   }
 }
 </script>

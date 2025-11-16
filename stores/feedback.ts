@@ -47,8 +47,9 @@ export const useFeedbackStore = defineStore('feedback', {
           },
         })
 
+        // Corrigir o mapeamento: a API retorna 'id', não 'sessionId'
         this.session = {
-          sessionId: response.sessionId,
+          sessionId: response.id,
           testerName,
           whatsapp,
           isActive: true,
@@ -59,7 +60,7 @@ export const useFeedbackStore = defineStore('feedback', {
           localStorage.setItem('feedback_session', JSON.stringify(this.session))
         }
 
-        return response.sessionId
+        return response.id
       } catch (error) {
         console.error('Erro ao iniciar sessão de feedback:', error)
         throw error

@@ -20,9 +20,15 @@
             </p>
           </div>
           <div class="quantidade">
-            <button @click="diminuirQuantidade(item.id)">-</button>
+            <button 
+              @click="diminuirQuantidade(item.id)"
+              :disabled="cartStore.loading"
+            >-</button>
             <span>{{ item.quantity }}</span>
-            <button @click="aumentarQuantidade(item.id)">+</button>
+            <button 
+              @click="aumentarQuantidade(item.id)"
+              :disabled="cartStore.loading"
+            >+</button>
           </div>
           <button @click="removerItem(item.id)" 
                   class="remove-btn">
@@ -87,6 +93,7 @@ const aumentarQuantidade = async (itemId: string) => {
     try {
       await cartStore.updateQuantity(itemId, item.quantity + 1)
     } catch (error: any) {
+      console.error('Erro ao aumentar quantidade:', error)
       alert(error.message || 'Erro ao atualizar quantidade')
     }
   }

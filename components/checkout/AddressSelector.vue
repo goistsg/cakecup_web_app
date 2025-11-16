@@ -246,7 +246,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selectedAddressId', id: string): void
-  (e: 'addressSaved'): void
+  (e: 'addressSaved', newAddressId: string): void
 }>()
 
 const showForm = ref(false)
@@ -340,17 +340,19 @@ async function saveAddress() {
   try {
     const { api } = useApi()
     
-    await api.createAddress({
-      ...formData.value,
-      clientId: props.userId,
+    const newAddress = await api.createAddress({
+      ...formData.value
     })
 
-    emit('addressSaved')
+    // Emitir evento com o ID do novo endereço para pré-selecioná-lo
+    emit('addressSaved', newAddress.id)
+    
+    // Definir saving como false antes de fechar a modal
+    saving.value = false
     closeForm()
   } catch (err: any) {
     error.value = err.message || 'Erro ao salvar endereço'
     console.error(err)
-  } finally {
     saving.value = false
   }
 }

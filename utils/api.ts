@@ -404,8 +404,8 @@ class ApiService {
       browser: string
       version: string
     }
-  }): Promise<{ sessionId: string }> {
-    return this.request<{ sessionId: string }>('/feedbacks/session/start', {
+  }): Promise<{ id: string }> {
+    return this.request<{ id: string }>('/feedbacks/session/start', {
       method: 'POST',
       body: data,
     })
